@@ -1,7 +1,7 @@
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from .models import CustomUser, PrestadorServicio, CategoriaPrestador
+from .models import CustomUser, PrestadorServicio, CategoriaPrestador, ContenidoMunicipio
 from rest_framework.authtoken.models import Token
 
 class AdminAPITests(APITestCase):
@@ -100,4 +100,70 @@ class AdminAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['nombre_negocio'], "Hotel La Roca")
+        
+  self.assertEqual(response.data['results'][0]['nombre_negocio'], "Hotel La Roca")
+
+
+class ContenidoMunicipioAPITests(APITestCase):
+    """
+    Pruebas para el ViewSet de ContenidoMunicipio, verificando permisos mixtos.
+    """
+    def setUp(self):
+        self.admin_user = CustomUser.objects.create_superuser('admin', 'admin@test.com', 'password')
+        self.turista_user = CustomUser.objects.create_user(
+            'turista', 'turista@test.com', 'password', role=CustomUser.Role.TURISTA
+        )
+
+        self.admin_token = Token.objects.create(user=self.admin_user)
+        self.turista_token = Token.objects.create(user=self.turista_user)
+
+        self.contenido = ContenidoMunicipio.objects.create(
+            seccion=ContenidoMunicipio.Seccion.INTRODUCCION,
+            titulo="Bienvenidos a Puerto Gaitán",
+            contenido="Un paraíso por descubrir.",
+            orden=1
+        )
+        self.list_url = reverse('contenido-municipio-public-list')
+        self.admin_list_url = reverse('contenido-municipio-list')
+        self.admin_detail_url = reverse('contenido-municipio-detail', kwargs={'pk': self.contenido.pk})
+
+    def _get_auth_header(self, token):
+        return {'HTTP_AUTHORIZATION': f'Token {token.key}'}
+
+    def test_public_can_list_content(self):
+        """Cualquier usuario (incluso no autenticado) puede listar el contenido."""
+        response = self.client.get(self.list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], 1)
+
+    def test_admin_can_create_content(self):
+        """Un admin puede crear un nuevo bloque de contenido."""
+        data = {
+            'seccion': ContenidoMunicipio.Seccion.ALOJAMIENTO,
+            'titulo': 'Hoteles de Lujo',
+            'contenido': 'Descripción de hoteles.',
+            'orden': 2
+        }
+        response = self.client.post(self.admin_list_url, data, **self._get_auth_header(self.admin_token))
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(ContenidoMunicipio.objects.count(), 2)
+
+    def test_turista_cannot_create_content(self):
+        """Un turista no puede crear contenido."""
+        data = {'seccion': 'OTRA', 'titulo': 'Intento', 'contenido': '...'}
+        response = self.client.post(self.admin_list_url, data, **self._get_auth_header(self.turista_token))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_can_update_content(self):
+        """Un admin puede actualizar un bloque de contenido."""
+        data = {'titulo': 'Nuevo Título'}
+        response = self.client.patch(self.admin_detail_url, data, **self._get_auth_header(self.admin_token))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.contenido.refresh_from_db()
+        self.assertEqual(self.contenido.titulo, 'Nuevo Título')
+
+    def test_admin_can_delete_content(self):
+        """Un admin puede eliminar un bloque de contenido."""
+        response = self.client.delete(self.admin_detail_url, **self._get_auth_header(self.admin_token))
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(ContenidoMunicipio.objects.count(), 0)

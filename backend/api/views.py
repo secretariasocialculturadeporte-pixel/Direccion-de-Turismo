@@ -8,7 +8,8 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from dj_rest_auth.registration.views import RegisterView
 from .models import (
     PrestadorServicio, ImagenGaleria, DocumentoLegalizacion, Publicacion,
-    ConsejoConsultivo, AtractivoTuristico, ElementoGuardado, CategoriaPrestador, Video
+    ConsejoConsultivo, AtractivoTuristico, ElementoGuardado, CategoriaPrestador, Video,
+    ContenidoMunicipio
 )
 from .serializers import (
     PrestadorServicioSerializer,
@@ -28,6 +29,7 @@ from .serializers import (
     PrestadorServicioPublicListSerializer,
     PrestadorServicioPublicDetailSerializer,
     AdminPrestadorServicioSerializer,
+    ContenidoMunicipioSerializer,
 )
 from .permissions import IsTurista, IsAdminOrFuncionario
 
@@ -370,5 +372,32 @@ class AdminApprovePrestadorView(views.APIView):
 
         prestador.aprobado = True
         prestador.save(update_fields=['aprobado'])
+        
+return Response({'status': 'Prestador aprobado con éxito.'}, status=status.HTTP_200_OK)
 
-        return Response({'status': 'Prestador aprobado con éxito.'}, status=status.HTTP_200_OK)
+class ContenidoMunicipioViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gestionar el contenido general del municipio.
+    - Lectura (list, retrieve) es pública.
+    - Escritura (create, update, destroy) es solo para Admins/Funcionarios.
+    """
+    queryset = ContenidoMunicipio.objects.all().order_by('orden')
+    serializer_class = ContenidoMunicipioSerializer
+
+    def get_permissions(self):
+        """
+        Asigna permisos basados en la acción.
+        """
+        if self.action in ['list', 'retrieve']:
+            self.permission_classes = [AllowAny]
+        else:
+            self.permission_classes = [IsAdminOrFuncionario]
+        return super().get_permissions()
+
+    def get_serializer_context(self):
+        """
+        Pasa el request al serializador para que pueda acceder al usuario.
+        """
+        context = super().get_serializer_context()
+        context.update({'request': self.request})
+        return context

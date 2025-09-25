@@ -3,7 +3,7 @@ from rest_framework import serializers
 from .models import (
     CustomUser, PrestadorServicio, ImagenGaleria, DocumentoLegalizacion, Publicacion,
     ConsejoConsultivo, AtractivoTuristico, ImagenAtractivo, ElementoGuardado, ContentType,
-    CategoriaPrestador, Video
+    CategoriaPrestador, Video, ContenidoMunicipio
 )
 
 class VideoSerializer(serializers.ModelSerializer):
@@ -295,4 +295,33 @@ class AdminPrestadorServicioSerializer(serializers.ModelSerializer):
             'fecha_creacion',
             'categoria_nombre',
             'usuario_email'
+  ]
+
+
+class ContenidoMunicipioSerializer(serializers.ModelSerializer):
+    """
+    Serializador para los bloques de contenido del municipio.
+    """
+    actualizado_por_username = serializers.CharField(source='actualizado_por.username', read_only=True)
+
+    class Meta:
+        model = ContenidoMunicipio
+        fields = [
+            'id',
+            'seccion',
+            'titulo',
+            'contenido',
+            'orden',
+            'actualizado_por_username',
+            'fecha_actualizacion',
         ]
+
+    def create(self, validated_data):
+        # Asigna el usuario actual al crear un nuevo bloque
+        validated_data['actualizado_por'] = self.context['request'].user
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        # Asigna el usuario actual al actualizar un bloque
+        validated_data['actualizado_por'] = self.context['request'].user
+        return super().update(instance, validated_data)

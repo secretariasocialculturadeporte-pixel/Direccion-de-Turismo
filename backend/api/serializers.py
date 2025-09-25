@@ -61,19 +61,21 @@ class PublicacionListSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Publicacion
-        fields = ['id', 'tipo', 'titulo', 'slug', 'imagen_principal', 'fecha_evento_inicio', 'fecha_evento_fin', 'fecha_publicacion']
+        fields = ['id', 'tipo', 'subcategoria_evento', 'titulo', 'slug', 'imagen_principal', 'fecha_evento_inicio', 'fecha_evento_fin', 'fecha_publicacion']
 
 class PublicacionDetailSerializer(serializers.ModelSerializer):
     """
     Serializador para ver el detalle completo de una publicación.
     """
     autor_nombre = serializers.CharField(source='autor.get_full_name', read_only=True)
+    subcategoria_evento_display = serializers.CharField(source='get_subcategoria_evento_display', read_only=True)
 
     class Meta:
         model = Publicacion
         fields = [
             'id', 'tipo', 'titulo', 'slug', 'contenido', 'imagen_principal',
-            'autor_nombre', 'fecha_evento_inicio', 'fecha_evento_fin', 'fecha_publicacion'
+            'autor_nombre', 'fecha_evento_inicio', 'fecha_evento_fin', 'fecha_publicacion',
+            'subcategoria_evento', 'subcategoria_evento_display'
         ]
 
 class ImagenGaleriaSerializer(serializers.ModelSerializer):

@@ -73,13 +73,26 @@ class CategoriaPrestadorAdmin(admin.ModelAdmin):
 @admin.register(Publicacion)
 class PublicacionAdmin(admin.ModelAdmin):
     """
-    Personalización del panel para Publicaciones (Eventos, Noticias, Blog).
+    Personalización del panel para Publicaciones (Eventos, Noticias, Blog, etc.).
     """
-    list_display = ('titulo', 'tipo', 'es_publicado', 'autor', 'fecha_publicacion')
-    list_filter = ('tipo', 'es_publicado')
+    list_display = ('titulo', 'tipo', 'subcategoria_evento', 'es_publicado', 'autor', 'fecha_publicacion')
+    list_filter = ('tipo', 'subcategoria_evento', 'es_publicado')
     search_fields = ('titulo', 'contenido')
     prepopulated_fields = {'slug': ('titulo',)}
     date_hierarchy = 'fecha_publicacion'
+
+    fieldsets = (
+        ('Información General', {
+            'fields': ('titulo', 'slug', 'tipo', 'es_publicado', 'autor')
+        }),
+        ('Contenido', {
+            'fields': ('contenido', 'imagen_principal')
+        }),
+        ('Fechas (Solo para Eventos/Capacitaciones)', {
+            'classes': ('collapse',),
+            'fields': ('fecha_evento_inicio', 'fecha_evento_fin', 'subcategoria_evento')
+        }),
+    )
 
 
 @admin.register(Video)

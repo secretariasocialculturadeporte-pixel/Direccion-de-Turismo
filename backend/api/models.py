@@ -126,6 +126,20 @@ class Publicacion(models.Model):
     autor = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name="publicaciones")
 
     # Campos específicos para eventos
+    class SubCategoria(models.TextChoices):
+        FESTIVAL_PRINCIPAL = "FESTIVAL_PRINCIPAL", _("Festival o Evento Principal")
+        CELEBRACION_LLANERIDAD = "CELEBRACION_LLANERIDAD", _("Celebración de la Llaneridad")
+        ACTIVIDAD_CIVICA = "ACTIVIDAD_CIVICA", _("Actividad Cultural o Cívica")
+        OTRO = "OTRO", _("Otro")
+
+    subcategoria_evento = models.CharField(
+        _("Subcategoría de Evento"),
+        max_length=50,
+        choices=SubCategoria.choices,
+        blank=True,
+        null=True,
+        help_text="Clasificación específica solo para eventos."
+    )
     fecha_evento_inicio = models.DateTimeField(blank=True, null=True)
     fecha_evento_fin = models.DateTimeField(blank=True, null=True)
 

@@ -195,7 +195,7 @@ class AtractivoTuristicoListView(generics.ListAPIView):
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        queryset = AtractivoTuristico.objects.all()
+        queryset = AtractivoTuristico.objects.filter(es_publicado=True)
         categoria = self.request.query_params.get('categoria', None)
         if categoria:
             queryset = queryset.filter(categoria_color__iexact=categoria)
@@ -206,7 +206,7 @@ class AtractivoTuristicoDetailView(generics.RetrieveAPIView):
     """
     Vista pública para ver el detalle de un atractivo turístico por su slug.
     """
-    queryset = AtractivoTuristico.objects.all()
+    queryset = AtractivoTuristico.objects.filter(es_publicado=True)
     serializer_class = AtractivoTuristicoDetailSerializer
     permission_classes = [AllowAny]
     lookup_field = 'slug'
@@ -245,9 +245,10 @@ class LocationListView(views.APIView):
                 # Ignorar si el formato de coordenadas es incorrecto o si no hay categoría
                 continue
 
-        # 2. Obtener Atractivos Turísticos (con ubicación)
-        atractivos = AtractivoTuristico.objects.exclude(
-            ubicacion_mapa__isnull=True
+        # 2. Obtener Atractivos Turísticos (solo los publicados y con ubicación)
+        atractivos = AtractivoTuristico.objects.filter(
+            es_publicado=True,
+            ubicacion_mapa__isnull=False
         ).exclude(ubicacion_mapa__exact='')
 
         for a in atractivos:

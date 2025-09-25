@@ -129,12 +129,30 @@ class AtractivoTuristicoAdmin(admin.ModelAdmin):
     """
     Personalización del panel para AtractivoTuristico.
     """
-    list_display = ('nombre', 'categoria_color', 'fecha_actualizacion')
-    list_filter = ('categoria_color',)
+    list_display = ('nombre', 'categoria_color', 'es_publicado', 'fecha_actualizacion')
+    list_filter = ('categoria_color', 'es_publicado')
     search_fields = ('nombre', 'descripcion', 'como_llegar')
     prepopulated_fields = {'slug': ('nombre',)}
     inlines = [ImagenAtractivoInline]
-    readonly_fields = ('fecha_creacion', 'fecha_actualizacion')
+    readonly_fields = ('fecha_creacion', 'fecha_actualizacion', 'autor')
+    actions = ['publicar_atractivos']
+
+    fieldsets = (
+        ('Información Principal', {
+            'fields': ('nombre', 'slug', 'categoria_color', 'es_publicado')
+        }),
+        ('Contenido Detallado', {
+            'fields': ('descripcion', 'como_llegar', 'ubicacion_mapa')
+        }),
+        ('Metadatos', {
+            'fields': ('autor', 'fecha_creacion', 'fecha_actualizacion')
+        }),
+    )
+
+    def publicar_atractivos(self, request, queryset):
+        """Acción para marcar los atractivos seleccionados como publicados."""
+        queryset.update(es_publicado=True)
+    publicar_atractivos.short_description = "Publicar atractivos seleccionados"
 
     def save_model(self, request, obj, form, change):
         """

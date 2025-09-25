@@ -224,6 +224,11 @@ class AtractivoTuristico(models.Model):
         limit_choices_to={'role__in': [CustomUser.Role.ADMIN, CustomUser.Role.FUNCIONARIO]},
         help_text="Funcionario o Administrador que creó el registro."
     )
+    es_publicado = models.BooleanField(
+        _("Publicado"),
+        default=False,
+        help_text="Marcar para que el atractivo sea visible en el sitio web público."
+    )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 

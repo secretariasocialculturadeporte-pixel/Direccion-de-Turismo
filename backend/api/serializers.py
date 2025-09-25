@@ -274,3 +274,25 @@ class ElementoGuardadoCreateSerializer(serializers.ModelSerializer):
             object_id=validated_data['object_id']
         )
         return instance
+
+
+class AdminPrestadorServicioSerializer(serializers.ModelSerializer):
+    """
+    Serializador para que el administrador vea la lista de prestadores.
+    Incluye todos los campos relevantes para la moderación.
+    """
+    categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
+    usuario_email = serializers.CharField(source='usuario.email', read_only=True)
+
+    class Meta:
+        model = PrestadorServicio
+        fields = [
+            'id',
+            'nombre_negocio',
+            'telefono',
+            'email_contacto',
+            'aprobado',
+            'fecha_creacion',
+            'categoria_nombre',
+            'usuario_email'
+        ]

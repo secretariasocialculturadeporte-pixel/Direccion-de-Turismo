@@ -42,25 +42,30 @@ function PrestadorDetailPageContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) {
-      async function loadData() {
-        try {
-          setLoading(true);
-          const data = await getPrestadorById(id);
-          setPrestador(data);
-          setError(null);
-        } catch (err) {
-          setError('No se pudo encontrar el prestador de servicios. Es posible que ya no esté disponible.');
-          console.error(err);
-        } finally {
-          setLoading(false);
-        }
+    const loadData = async () => {
+      // Esta guarda de tipo con retorno temprano es más clara para TypeScript.
+      // Si no hay id, establecemos un error y no continuamos.
+      if (id === null) {
+        setError('ID de prestador no válido.');
+        setLoading(false);
+        return;
       }
-      loadData();
-    } else {
-      setError('ID de prestador no válido.');
-      setLoading(false);
-    }
+
+      try {
+        setLoading(true);
+        // Al llegar aquí, TypeScript sabe que `id` es un `number`.
+        const data = await getPrestadorById(id);
+        setPrestador(data);
+        setError(null);
+      } catch (err) {
+        setError('No se pudo encontrar el prestador de servicios. Es posible que ya no esté disponible.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, [id]);
 
   if (loading) {

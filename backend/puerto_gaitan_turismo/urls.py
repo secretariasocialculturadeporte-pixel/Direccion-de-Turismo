@@ -29,6 +29,8 @@ urlpatterns = [
     path("api/auth/registration/", include("dj_rest_auth.registration.urls")),
     # Registro para Turistas (endpoint específico)
     path("api/auth/registration/turista/", TuristaRegisterView.as_view(), name='turista-register'),
+    # Rutas de Administración
+    path("api/admin/", include("api.admin_urls")),
     # Rutas de la API de la aplicación
     path("api/", include("api.urls")),
 ]

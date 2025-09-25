@@ -1,3 +1,18 @@
+export const getPrestadores = async (categoriaSlug?: string): Promise<PrestadorPublico[]> => {
+  let url = '/prestadores/';
+  if (categoriaSlug) {
+    url += `?categoria=${categoriaSlug}`;
+  }
+  const response = await apiClient.get(url);
+  return response.data;
+};
+✅ Recomendación: Mantén la Versión A, porque es más completa y escalable.
+Con ella podrás implementar búsqueda y filtros combinados en el frontend sin tener que modificar de nuevo el cliente.
+
+Entonces, el archivo corregido debería quedar así (sin marcas de conflicto):
+
+ts
+Copiar código
 import axios from 'axios';
 
 // Define la URL base de tu API de Django

@@ -44,18 +44,17 @@ if created:
 # --- Crear un segundo usuario de prueba para el artesano ---
 user_artesano, created = CustomUser.objects.get_or_create(
     username='artesano_test',
-    defaults={'role': CustomUser.Role.PRESTADOR, 'email': 'artesano@example.com'} # Artesanos también son un tipo de PRESTADOR
+    defaults={'role': CustomUser.Role.PRESTADOR, 'email': 'artesano@example.com'}
 )
 if created:
     user_artesano.set_password('testpassword')
     user_artesano.save()
     print("Test user 'artesano_test' created.")
 
-
 # --- Crear un prestador de servicio de ejemplo (Hotel) ---
 categoria_hotel = CategoriaPrestador.objects.get(slug='hoteles')
 prestador_hotel, created = PrestadorServicio.objects.get_or_create(
-    usuario=user_prestador, # Usar el primer usuario
+    usuario=user_prestador,
     defaults={
         'nombre_negocio': 'Hotel El Descanso Llanero',
         'categoria': categoria_hotel,
@@ -66,11 +65,16 @@ prestador_hotel, created = PrestadorServicio.objects.get_or_create(
 )
 if created:
     print("Approved service provider 'Hotel El Descanso Llanero' created.")
+else:
+    if not prestador_hotel.aprobado:
+        prestador_hotel.aprobado = True
+        prestador_hotel.save()
+        print("Service provider 'Hotel El Descanso Llanero' set to approved.")
 
 # --- Crear un artesano de ejemplo ---
 categoria_artesano = CategoriaPrestador.objects.get(slug='artesanos')
 artesano_ejemplo, created = PrestadorServicio.objects.get_or_create(
-    usuario=user_artesano, # Usar el segundo usuario
+    usuario=user_artesano,
     defaults={
         'nombre_negocio': 'Artesanías El Capibara de Oro',
         'categoria': categoria_artesano,
@@ -81,5 +85,10 @@ artesano_ejemplo, created = PrestadorServicio.objects.get_or_create(
 )
 if created:
     print("Approved artisan 'Artesanías El Capibara de Oro' created.")
+else:
+    if not artesano_ejemplo.aprobado:
+        artesano_ejemplo.aprobado = True
+        artesano_ejemplo.save()
+        print("Artisan 'Artesanías El Capibara de Oro' set to approved.")
 
 print("Sample data creation/verification complete.")

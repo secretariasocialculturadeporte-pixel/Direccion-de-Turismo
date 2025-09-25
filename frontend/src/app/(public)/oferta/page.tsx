@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { getCategorias, getPrestadores, Categoria, PrestadorPublico } from '@/services/api';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -29,7 +29,7 @@ function OfertaContent() {
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500); // 500ms de retardo
 
-  // Carga inicial de categorías y todos los prestadores
+  // Carga inicial de categorías y prestadores
   useEffect(() => {
     async function loadInitialData() {
       try {
@@ -94,7 +94,9 @@ function OfertaContent() {
       <div className="flex flex-wrap justify-center gap-2 mb-8">
         <button
           onClick={() => handleCategoriaClick(undefined)}
-          className={`px-4 py-2 rounded-full text-sm font-semibold ${!selectedCategoria ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-4 py-2 rounded-full text-sm font-semibold ${
+            !selectedCategoria ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+          }`}
         >
           Todos
         </button>
@@ -102,7 +104,9 @@ function OfertaContent() {
           <button
             key={cat.id}
             onClick={() => handleCategoriaClick(cat.slug)}
-            className={`px-4 py-2 rounded-full text-sm font-semibold ${selectedCategoria === cat.slug ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+            className={`px-4 py-2 rounded-full text-sm font-semibold ${
+              selectedCategoria === cat.slug ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+            }`}
           >
             {cat.nombre}
           </button>
@@ -114,6 +118,7 @@ function OfertaContent() {
       {/* Grid de Prestadores */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {loading ? (
+          // Mostrar esqueletos mientras carga
           Array.from({ length: 8 }).map((_, index) => <PrestadorCardSkeleton key={index} />)
         ) : prestadores.length > 0 ? (
           prestadores.map((prestador) => (
@@ -121,7 +126,11 @@ function OfertaContent() {
               <a className="border rounded-lg shadow-md hover:shadow-xl transition-shadow overflow-hidden group">
                 <div className="relative w-full h-48">
                   {prestador.imagen_principal ? (
-                    <img src={prestador.imagen_principal} alt={`Imagen de ${prestador.nombre_negocio}`} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                    <img
+                      src={prestador.imagen_principal}
+                      alt={`Imagen de ${prestador.nombre_negocio}`}
+                      className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                    />
                   ) : (
                     <div className="w-full h-full bg-gray-200 flex items-center justify-center">
                       <span className="text-gray-500">Sin imagen</span>
@@ -136,7 +145,9 @@ function OfertaContent() {
             </Link>
           ))
         ) : (
-          <p className="text-center col-span-full">No se encontraron resultados para tu búsqueda.</p>
+          <p className="text-center col-span-full">
+            No se encontraron resultados para tu búsqueda.
+          </p>
         )}
       </div>
     </div>
@@ -144,9 +155,9 @@ function OfertaContent() {
 }
 
 export default function OfertaPage() {
-    return (
-        <Suspense fallback={<div>Cargando...</div>}>
-            <OfertaContent />
-        </Suspense>
-    )
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <OfertaContent />
+    </Suspense>
+  );
 }

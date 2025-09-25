@@ -2,8 +2,18 @@ from dj_rest_auth.registration.serializers import RegisterSerializer
 from rest_framework import serializers
 from .models import (
     CustomUser, PrestadorServicio, ImagenGaleria, DocumentoLegalizacion, Publicacion,
-    ConsejoConsultivo, AtractivoTuristico, ImagenAtractivo, ElementoGuardado, ContentType
+    ConsejoConsultivo, AtractivoTuristico, ImagenAtractivo, ElementoGuardado, ContentType,
+    CategoriaPrestador, Video
 )
+
+class VideoSerializer(serializers.ModelSerializer):
+    """
+    Serializador para los videos.
+    """
+    class Meta:
+        model = Video
+        fields = ['id', 'titulo', 'descripcion', 'url_youtube', 'fecha_publicacion']
+
 
 class ConsejoConsultivoSerializer(serializers.ModelSerializer):
     """
@@ -108,6 +118,48 @@ class DocumentoLegalizacionSerializer(serializers.ModelSerializer):
         model = DocumentoLegalizacion
         fields = ['id', 'documento', 'nombre_documento', 'fecha_subida', 'prestador']
         read_only_fields = ['prestador', 'fecha_subida']
+
+
+class CategoriaPrestadorSerializer(serializers.ModelSerializer):
+    """
+    Serializador para las categorías de los prestadores de servicios.
+    """
+    class Meta:
+        model = CategoriaPrestador
+        fields = ['id', 'nombre', 'slug']
+
+
+class PrestadorServicioPublicListSerializer(serializers.ModelSerializer):
+    """
+    Serializador para la vista pública de la lista de prestadores de servicios.
+    """
+    categoria_nombre = serializers.CharField(source='categoria.nombre', read_only=True)
+    imagen_principal = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PrestadorServicio
+        fields = ['id', 'nombre_negocio', 'categoria_nombre', 'imagen_principal']
+
+    def get_imagen_principal(self, obj):
+        primera_imagen = obj.galeria_imagenes.first()
+        if primera_imagen:
+            request = self.context.get('request')
+            return request.build_absolute_uri(primera_imagen.imagen.url)
+        return None
+
+
+class PrestadorServicioPublicDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializador para el detalle público de un prestador de servicios.
+    """
+    categoria = CategoriaPrestadorSerializer(read_only=True)
+    galeria_imagenes = ImagenGaleriaSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = PrestadorServicio
+        # Excluimos campos sensibles o de gestión interna
+        exclude = ['usuario', 'aprobado', 'reporte_ocupacion_nacional', 'reporte_ocupacion_internacional']
+
 
 class PrestadorServicioSerializer(serializers.ModelSerializer):
     """

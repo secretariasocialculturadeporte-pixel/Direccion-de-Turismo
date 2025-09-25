@@ -17,6 +17,7 @@ from .views import (
     CategoriaPrestadorListView,
     PrestadorServicioPublicListView,
     PrestadorServicioPublicDetailView,
+    ContenidoMunicipioViewSet,
 )
 
 # Creamos un router para registrar los ViewSets
@@ -44,4 +45,5 @@ urlpatterns = [
     path('atractivos/', AtractivoTuristicoListView.as_view(), name='atractivos-list'),
     path('atractivos/<slug:slug>/', AtractivoTuristicoDetailView.as_view(), name='atractivos-detail'),
     path('locations/', LocationListView.as_view(), name='locations-list'),
+    path('contenido-municipio/', ContenidoMunicipioViewSet.as_view({'get': 'list'}), name='contenido-municipio-public-list'),
 ]

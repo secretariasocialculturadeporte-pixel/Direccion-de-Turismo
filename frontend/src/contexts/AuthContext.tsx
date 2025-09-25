@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (userResponse.data.role === 'TURISTA') {
         const savedItemsResponse = await axios.get(`${API_BASE_URL}/mi-viaje/`, { headers });
-        const itemMap = new Map(savedItemsResponse.data.map((item: SavedItem) => [`${item.content_type_name}_${item.object_id}`, item.id]));
+        const itemMap: Map<string, number> = new Map(savedItemsResponse.data.map((item: SavedItem) => [`${item.content_type_name}_${item.object_id}`, item.id]));
         setSavedItemsMap(itemMap);
       }
     } catch (error) {

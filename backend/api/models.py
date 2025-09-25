@@ -278,3 +278,56 @@ class ElementoGuardado(models.Model):
         # Un usuario no puede guardar el mismo objeto dos veces.
         unique_together = ('usuario', 'content_type', 'object_id')
         ordering = ['-fecha_guardado']
+
+
+class ContenidoMunicipio(models.Model):
+    """
+    Modelo para gestionar los bloques de contenido de la página
+    "Datos Generales del Municipio".
+    """
+    class Seccion(models.TextChoices):
+        INTRODUCCION = "INTRODUCCION", _("Introducción General")
+        UBICACION_CLIMA = "UBICACION_CLIMA", _("Ubicación y Clima")
+        ALOJAMIENTO = "ALOJAMIENTO", _("Alojamiento y Hotelería")
+        COMO_LLEGAR = "COMO_LLEGAR", _("¿Cómo Llegar?")
+        CONTACTOS = "CONTACTOS", _("Contactos de Interés")
+        FINANZAS = "FINANZAS", _("Entidades Financieras")
+        OTRA = "OTRA", _("Otra Sección")
+
+    seccion = models.CharField(
+        _("Sección Temática"),
+        max_length=50,
+        choices=Seccion.choices,
+        help_text="Agrupa el contenido bajo una categoría temática."
+    )
+    titulo = models.CharField(
+        _("Título del Bloque"),
+        max_length=255,
+        help_text="El título principal que se mostrará para este bloque de contenido."
+    )
+    contenido = models.TextField(
+        _("Contenido del Bloque"),
+        help_text="El contenido principal. Se recomienda usar formato Markdown para el texto."
+    )
+    orden = models.PositiveIntegerField(
+        default=0,
+        db_index=True,
+        help_text="Define el orden de aparición de los bloques en la página (0 primero, 1 después, etc.)."
+    )
+    actualizado_por = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        limit_choices_to={'role__in': [CustomUser.Role.ADMIN, CustomUser.Role.FUNCIONARIO]},
+        help_text="Último usuario que modificó este contenido."
+    )
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.get_seccion_display()} - {self.titulo}"
+
+    class Meta:
+        verbose_name = "Contenido del Municipio"
+        verbose_name_plural = "Contenidos del Municipio"
+        ordering = ['orden', 'titulo']

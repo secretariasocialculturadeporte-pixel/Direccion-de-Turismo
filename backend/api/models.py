@@ -2,6 +2,8 @@ import os
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 def prestador_directory_path(instance, filename):
     # file will be uploaded to MEDIA_ROOT/prestadores/<username>/<filename>
@@ -29,15 +31,19 @@ class CustomUser(AbstractUser):
         ADMIN = "ADMIN", _("Administrador General")
         FUNCIONARIO = "FUNCIONARIO", _("Funcionario de Turismo")
         PRESTADOR = "PRESTADOR", _("Prestador de Servicio")
+        TURISTA = "TURISTA", _("Turista")
 
-    base_role = Role.ADMIN
+    base_role = Role.TURISTA
 
-    role = models.CharField(_("Rol"), max_length=50, choices=Role.choices, default=base_role)
+    role = models.CharField(_("Rol"), max_length=50, choices=Role.choices)
 
     def save(self, *args, **kwargs):
         if not self.pk:
-            self.role = self.base_role
-        return super().save(*args, **kwargs)
+            if self.is_superuser:
+                self.role = self.Role.ADMIN
+            elif not self.role:
+                self.role = self.base_role
+        super().save(*args, **kwargs)
 
 
 class CategoriaPrestador(models.Model):
@@ -240,3 +246,30 @@ class ImagenAtractivo(models.Model):
 
     def __str__(self):
         return f"Imagen de {self.atractivo.nombre}"
+
+
+class ElementoGuardado(models.Model):
+    """
+    Modelo para que un Turista pueda guardar sus elementos favoritos (Mi Viaje).
+    Utiliza una Clave Externa Genérica para poder apuntar a cualquier otro modelo.
+    """
+    usuario = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        related_name='elementos_guardados',
+        limit_choices_to={'role': CustomUser.Role.TURISTA}
+    )
+    # Campos para la Clave Externa Genérica
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+
+    fecha_guardado = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.usuario.username} guardó {self.content_object}'
+
+    class Meta:
+        # Un usuario no puede guardar el mismo objeto dos veces.
+        unique_together = ('usuario', 'content_type', 'object_id')
+        ordering = ['-fecha_guardado']

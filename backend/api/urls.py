@@ -1,5 +1,5 @@
-from django.urls import path
-from .views import (
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from .views import (
     PrestadorProfileView,
     ImagenGaleriaView,
@@ -12,7 +12,12 @@ from .views import (
     AtractivoTuristicoListView,
     AtractivoTuristicoDetailView,
     LocationListView,
+    ElementoGuardadoViewSet,
 )
+
+# Creamos un router para registrar los ViewSets
+router = DefaultRouter()
+router.register(r'mi-viaje', ElementoGuardadoViewSet, basename='elemento-guardado')
 
 urlpatterns = [
     # --- Vistas Privadas (Requieren Autenticación) ---
@@ -21,6 +26,8 @@ urlpatterns = [
     path('galeria/<int:pk>/', ImagenGaleriaDetailView.as_view(), name='galeria-detail'),
     path('documentos/', DocumentoLegalizacionView.as_view(), name='documentos-list-create'),
     path('documentos/<int:pk>/', DocumentoLegalizacionDetailView.as_view(), name='documentos-detail'),
+    # Incluimos las rutas del ViewSet de "Mi Viaje"
+    path('', include(router.urls)),
 
     # --- Vistas Públicas ---
     path('publicaciones/', PublicacionListView.as_view(), name='publicaciones-list'),

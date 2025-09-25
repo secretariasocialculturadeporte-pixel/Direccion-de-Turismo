@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
+import SaveButton from '@/components/SaveButton';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
@@ -87,9 +88,11 @@ export default function AtractivosPage() {
                         className="h-full w-full object-cover"
                       />
                       <div className={`absolute top-0 left-0 h-full w-1 ${CategoriaInfo[atractivo.categoria_color].color}`}></div>
-                       <span className={`absolute top-2 right-2 px-2 py-1 text-xs font-bold text-white rounded-full ${CategoriaInfo[atractivo.categoria_color].color}`}>
+                      <span className={`absolute bottom-2 left-2 px-2 py-1 text-xs font-bold text-white rounded-full ${CategoriaInfo[atractivo.categoria_color].color}`}>
                         {CategoriaInfo[atractivo.categoria_color].nombre}
                       </span>
+                      {/* Botón de Guardar */}
+                      <SaveButton contentType="atractivoturistico" objectId={atractivo.id} />
                     </div>
                     <div className="p-6 flex-grow flex flex-col">
                       <h3 className="text-xl font-bold text-gray-900 group-hover:text-indigo-600">

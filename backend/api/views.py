@@ -1,10 +1,11 @@
-from rest_framework import generics, views
+from rest_framework import generics, views, viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
+from dj_rest_auth.registration.views import RegisterView
 from .models import (
     PrestadorServicio, ImagenGaleria, DocumentoLegalizacion, Publicacion,
-    ConsejoConsultivo, AtractivoTuristico
+    ConsejoConsultivo, AtractivoTuristico, ElementoGuardado
 )
 from .serializers import (
     PrestadorServicioSerializer,
@@ -16,7 +17,11 @@ from .serializers import (
     AtractivoTuristicoListSerializer,
     AtractivoTuristicoDetailSerializer,
     LocationSerializer,
+    TuristaRegisterSerializer,
+    ElementoGuardadoSerializer,
+    ElementoGuardadoCreateSerializer,
 )
+from .permissions import IsTurista
 
 class PrestadorProfileView(generics.RetrieveUpdateAPIView):
     """
@@ -102,6 +107,35 @@ class DocumentoLegalizacionDetailView(generics.RetrieveDestroyAPIView):
     def get_queryset(self):
         """Asegura que solo se puedan borrar documentos del propio prestador."""
         return DocumentoLegalizacion.objects.filter(prestador=self.request.user.perfil_prestador)
+
+
+class TuristaRegisterView(RegisterView):
+    """
+    Vista para el registro de usuarios con el rol de Turista.
+    """
+    serializer_class = TuristaRegisterSerializer
+
+
+class ElementoGuardadoViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para que los turistas gestionen sus elementos guardados (Mi Viaje).
+    Permite listar, crear y eliminar elementos guardados.
+    """
+    permission_classes = [IsAuthenticated, IsTurista]
+
+    def get_queryset(self):
+        # Asegura que cada turista solo pueda ver y gestionar sus propios elementos guardados.
+        return ElementoGuardado.objects.filter(usuario=self.request.user)
+
+    def get_serializer_class(self):
+        # Usa un serializador diferente para la creación (más simple) vs. la lectura (más detallado).
+        if self.action == 'create':
+            return ElementoGuardadoCreateSerializer
+        return ElementoGuardadoSerializer
+
+    def get_serializer_context(self):
+        # Pasa el objeto 'request' al serializador para que pueda acceder al usuario.
+        return {'request': self.request}
 
 
 # --- Vistas Públicas ---

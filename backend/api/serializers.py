@@ -2,7 +2,7 @@ from dj_rest_auth.registration.serializers import RegisterSerializer
 from rest_framework import serializers
 from .models import (
     CustomUser, PrestadorServicio, ImagenGaleria, DocumentoLegalizacion, Publicacion,
-    ConsejoConsultivo, AtractivoTuristico, ImagenAtractivo
+    ConsejoConsultivo, AtractivoTuristico, ImagenAtractivo, ElementoGuardado, ContentType
 )
 
 class ConsejoConsultivoSerializer(serializers.ModelSerializer):
@@ -130,10 +130,22 @@ class PrestadorServicioSerializer(serializers.ModelSerializer):
         read_only_fields = ['aprobado', 'categoria_nombre', 'galeria_imagenes', 'documentos_legalizacion']
 
 
-class CustomRegisterSerializer(RegisterSerializer):
+class TuristaRegisterSerializer(RegisterSerializer):
     """
-    Serializador de registro personalizado.
-    Cuando un usuario se registra, automáticamente se le asigna el rol 'PRESTADOR'
+    Serializador de registro simplificado para usuarios turistas.
+    Cuando un usuario se registra, automáticamente se le asigna el rol 'TURISTA'.
+    """
+    def save(self, request):
+        user = super().save(request)
+        user.role = CustomUser.Role.TURISTA
+        user.save()
+        return user
+
+
+class PrestadorRegisterSerializer(RegisterSerializer):
+    """
+    Serializador de registro para Prestadores de Servicios.
+    Cuando un usuario se registra por esta vía, se le asigna el rol 'PRESTADOR'
     y se le crea un perfil de PrestadorServicio vacío.
     """
 
@@ -153,3 +165,60 @@ class CustomRegisterSerializer(RegisterSerializer):
         )
 
         return user
+
+
+class ElementoGuardadoSerializer(serializers.ModelSerializer):
+    """
+    Serializador para mostrar los elementos guardados por un usuario.
+    Determina dinámicamente qué serializador usar para el objeto guardado.
+    """
+    content_object = serializers.SerializerMethodField()
+    content_type_name = serializers.CharField(source='content_type.model', read_only=True)
+
+    class Meta:
+        model = ElementoGuardado
+        fields = ['id', 'fecha_guardado', 'object_id', 'content_type_name', 'content_object']
+
+    def get_content_object(self, obj):
+        if isinstance(obj.content_object, AtractivoTuristico):
+            return AtractivoTuristicoListSerializer(obj.content_object, context=self.context).data
+        if isinstance(obj.content_object, Publicacion):
+            return PublicacionListSerializer(obj.content_object, context=self.context).data
+        return None
+
+class ElementoGuardadoCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializador para que un usuario guarde un nuevo elemento favorito.
+    """
+    content_type = serializers.CharField()
+
+    class Meta:
+        model = ElementoGuardado
+        fields = ['content_type', 'object_id']
+
+    def validate(self, data):
+        content_type_str = data['content_type'].lower()
+        model_map = {
+            'atractivoturistico': AtractivoTuristico,
+            'publicacion': Publicacion,
+        }
+        model = model_map.get(content_type_str)
+
+        if not model:
+            raise serializers.ValidationError("Tipo de contenido no válido.")
+
+        if not model.objects.filter(pk=data['object_id']).exists():
+            raise serializers.ValidationError("El objeto especificado no existe.")
+
+        data['content_type'] = ContentType.objects.get_for_model(model)
+        return data
+
+    def create(self, validated_data):
+        # get_or_create para manejar la creación de forma idempotente.
+        # Si ya existe, simplemente lo devuelve.
+        instance, _ = ElementoGuardado.objects.get_or_create(
+            usuario=self.context['request'].user,
+            content_type=validated_data['content_type'],
+            object_id=validated_data['object_id']
+        )
+        return instance

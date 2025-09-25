@@ -19,12 +19,16 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from api.views import TuristaRegisterView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     # Rutas de autenticación
     path("api/auth/", include("dj_rest_auth.urls")),
+    # Registro para Prestadores (el default)
     path("api/auth/registration/", include("dj_rest_auth.registration.urls")),
+    # Registro para Turistas (endpoint específico)
+    path("api/auth/registration/turista/", TuristaRegisterView.as_view(), name='turista-register'),
     # Rutas de la API de la aplicación
     path("api/", include("api.urls")),
 ]

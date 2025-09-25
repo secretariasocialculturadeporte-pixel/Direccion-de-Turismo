@@ -146,7 +146,7 @@ SITE_ID = 1
 
 # Configuraciones de DJ-REST-AUTH
 REST_AUTH = {
-    'REGISTER_SERIALIZER': 'api.serializers.CustomRegisterSerializer',
+    'REGISTER_SERIALIZER': 'api.serializers.PrestadorRegisterSerializer',
 }
 
 # Configuraciones de CORS

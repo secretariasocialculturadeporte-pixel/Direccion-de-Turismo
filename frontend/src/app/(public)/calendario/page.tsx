@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
+import SaveButton from '@/components/SaveButton';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
@@ -110,9 +111,11 @@ export default function CalendarioPage() {
                         alt={pub.titulo}
                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
-                      <span className="absolute top-2 right-2 bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      <span className="absolute bottom-2 left-2 bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded-full">
                         {pub.tipo === 'EVENTO' ? 'Evento' : 'Capacitación'}
                       </span>
+                      {/* Botón de Guardar */}
+                      <SaveButton contentType="publicacion" objectId={pub.id} />
                     </div>
                     <div className="p-6 flex-grow flex flex-col">
                       <h3 className="text-xl font-bold text-gray-900 group-hover:text-indigo-600">

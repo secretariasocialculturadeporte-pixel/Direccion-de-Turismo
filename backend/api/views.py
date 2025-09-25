@@ -2,6 +2,7 @@ from rest_framework import generics, views, viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.filters import SearchFilter, OrderingFilter
 from dj_rest_auth.registration.views import RegisterView
 from .models import (
     PrestadorServicio, ImagenGaleria, DocumentoLegalizacion, Publicacion,
@@ -143,10 +144,13 @@ class ElementoGuardadoViewSet(viewsets.ModelViewSet):
 class PublicacionListView(generics.ListAPIView):
     """
     Vista pública para listar todas las publicaciones (eventos, noticias, etc.).
-    Permite filtrar por tipo, por ejemplo: /api/publicaciones/?tipo=EVENTO
+    Permite filtrar por tipo, buscar por texto y ordenar los resultados.
     """
     serializer_class = PublicacionListSerializer
     permission_classes = [AllowAny]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['titulo', 'contenido']
+    ordering_fields = ['fecha_publicacion', 'titulo']
 
     def get_queryset(self):
         """

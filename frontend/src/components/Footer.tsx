@@ -30,10 +30,11 @@ export default function Footer() {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">Enlaces Rápidos</h3>
             <ul className="space-y-2">
-              <li><Link href="/oferta" className="text-gray-400 hover:text-white">Oferta Turística</Link></li>
-              <li><Link href="/calendario" className="text-gray-400 hover:text-white">Calendario de Actividades</Link></li>
+              <li><Link href="/atractivos" className="text-gray-400 hover:text-white">Atractivos</Link></li>
+              <li><Link href="/agenda-cultural" className="text-gray-400 hover:text-white">Agenda Cultural</Link></li>
+              <li><Link href="/noticias" className="text-gray-400 hover:text-white">Noticias</Link></li>
+              <li><Link href="/blog" className="text-gray-400 hover:text-white">Blog</Link></li>
               <li><Link href="/mapa" className="text-gray-400 hover:text-white">Mapa Interactivo</Link></li>
-              <li><Link href="/consejo-consultivo" className="text-gray-400 hover:text-white">Consejo Consultivo</Link></li>
             </ul>
           </div>
 

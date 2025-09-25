@@ -172,3 +172,9 @@ ACCOUNT_LOGIN_ON_MFA_PASSWORD_VERIFIED = False
 
 # Configuración de email para desarrollo (imprime en consola)
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# Configuraciones de Django REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+}

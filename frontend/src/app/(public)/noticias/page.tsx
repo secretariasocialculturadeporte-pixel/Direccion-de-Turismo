@@ -7,14 +7,12 @@ import useDebounce from '@/hooks/useDebounce';
 
 const API_BASE_URL = 'http://localhost:8000/api';
 
-interface BlogArticle {
+interface Noticia {
   id: number;
   titulo: string;
   slug: string;
   imagen_principal: string | null;
   fecha_publicacion: string;
-  // Para el blog, podríamos querer un extracto en la API, pero por ahora lo simulamos
-  contenido: string;
 }
 
 const formatDate = (dateString: string) => {
@@ -25,15 +23,8 @@ const formatDate = (dateString: string) => {
   });
 };
 
-// Función para crear un extracto del contenido
-const createExcerpt = (htmlContent: string, length = 150) => {
-  const text = htmlContent.replace(/<[^>]+>/g, ''); // Eliminar HTML
-  if (text.length <= length) return text;
-  return text.substring(0, length) + '...';
-};
-
-export default function BlogPage() {
-  const [articles, setArticles] = useState<BlogArticle[]>([]);
+export default function NoticiasPage() {
+  const [noticias, setNoticias] = useState<Noticia[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,11 +32,11 @@ export default function BlogPage() {
   const [hasNextPage, setHasNextPage] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [ordering, setOrdering] = useState('-fecha_publicacion');
+  const [ordering, setOrdering] = useState('-fecha_publicacion'); // Más recientes primero
 
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
-  const fetchArticles = useCallback(async (isNewSearch = false) => {
+  const fetchNoticias = useCallback(async (isNewSearch = false) => {
     setIsLoading(true);
     setError(null);
 
@@ -54,28 +45,23 @@ export default function BlogPage() {
     try {
       const response = await axios.get(`${API_BASE_URL}/publicaciones/`, {
         params: {
-          tipo: 'BLOG',
+          tipo: 'NOTICIA',
           search: debouncedSearchTerm,
           ordering: ordering,
           page: currentPage,
         },
       });
 
-      const resultsWithExcerpts = response.data.results.map((article: any) => ({
-        ...article,
-        contenido: createExcerpt(article.contenido || ''),
-      }));
-
       if (isNewSearch) {
-        setArticles(resultsWithExcerpts);
+        setNoticias(response.data.results);
       } else {
-        setArticles(prev => [...prev, ...resultsWithExcerpts]);
+        setNoticias(prev => [...prev, ...response.data.results]);
       }
 
       setHasNextPage(!!response.data.next);
 
     } catch (err) {
-      setError('No se pudieron cargar los artículos del blog.');
+      setError('No se pudieron cargar las noticias.');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -83,7 +69,7 @@ export default function BlogPage() {
   }, [debouncedSearchTerm, ordering, page]);
 
   useEffect(() => {
-    fetchArticles(true);
+    fetchNoticias(true);
   }, [debouncedSearchTerm, ordering]);
 
   const handleLoadMore = () => {
@@ -92,26 +78,27 @@ export default function BlogPage() {
 
   useEffect(() => {
     if (page > 1) {
-      fetchArticles(false);
+      fetchNoticias(false);
     }
   }, [page]);
 
+
   return (
-    <div className="py-12 bg-white">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="py-12 bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl">
-            Blog de Historias Llaneras
+            Noticias de Puerto Gaitán
           </h1>
           <p className="mt-4 text-xl text-gray-600">
-            Sumérgete en las historias, cultura y proyectos que hacen único a Puerto Gaitán.
+            Mantente al día con las últimas novedades y acontecimientos de nuestro municipio.
           </p>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <input
             type="text"
-            placeholder="Buscar en el blog..."
+            placeholder="Buscar noticias..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="flex-grow px-4 py-2 border border-gray-300 rounded-md shadow-sm"
@@ -122,45 +109,40 @@ export default function BlogPage() {
             className="px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-white"
           >
             <option value="-fecha_publicacion">Más recientes</option>
-            <option value="fecha_publicacion">Más antiguos</option>
+            <option value="fecha_publicacion">Más antiguas</option>
             <option value="titulo">Título (A-Z)</option>
             <option value="-titulo">Título (Z-A)</option>
           </select>
         </div>
 
         {isLoading && page === 1 ? (
-          <p className="text-center">Cargando artículos...</p>
+          <p className="text-center">Cargando noticias...</p>
         ) : error ? (
           <p className="text-center text-red-500">{error}</p>
         ) : (
           <>
-            <div className="space-y-12">
-              {articles.map((article) => (
-                <Link key={article.id} href={`/publicaciones/${article.slug}`} className="block group">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-                    <div className="md:col-span-1">
-                      <img
-                        src={article.imagen_principal || 'https://via.placeholder.com/400x300/6B7280/FFFFFF?text=Blog'}
-                        alt={article.titulo}
-                        className="rounded-lg shadow-lg object-cover h-48 w-full"
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <p className="text-sm text-gray-500">{formatDate(article.fecha_publicacion)}</p>
-                      <h2 className="mt-2 text-2xl font-bold text-gray-900 group-hover:text-indigo-600">
-                        {article.titulo}
-                      </h2>
-                      <p className="mt-3 text-gray-600">
-                        {article.contenido}
-                      </p>
-                      <p className="mt-4 text-indigo-500 font-semibold self-start">Leer artículo completo →</p>
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+              {noticias.map((noticia) => (
+                <Link key={noticia.id} href={`/publicaciones/${noticia.slug}`} className="block group">
+                  <div className="bg-white rounded-lg shadow-lg overflow-hidden h-full flex flex-col">
+                    <img
+                      src={noticia.imagen_principal || 'https://via.placeholder.com/400x300/CCCCCC/FFFFFF?text=Noticia'}
+                      alt={noticia.titulo}
+                      className="h-48 w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="p-6 flex-grow flex flex-col">
+                      <p className="text-sm text-gray-500">{formatDate(noticia.fecha_publicacion)}</p>
+                      <h3 className="mt-2 text-xl font-bold text-gray-900 group-hover:text-indigo-600 flex-grow">
+                        {noticia.titulo}
+                      </h3>
+                      <p className="mt-4 text-indigo-500 font-semibold self-start">Leer más →</p>
                     </div>
                   </div>
                 </Link>
               ))}
             </div>
-            {articles.length === 0 && !isLoading && (
-              <p className="text-center text-gray-500 mt-8">No se encontraron artículos con los criterios actuales.</p>
+            {noticias.length === 0 && !isLoading && (
+              <p className="col-span-full text-center text-gray-500 mt-8">No se encontraron noticias con los criterios actuales.</p>
             )}
             {hasNextPage && (
               <div className="text-center mt-12">
@@ -169,7 +151,7 @@ export default function BlogPage() {
                   disabled={isLoading}
                   className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 disabled:bg-indigo-400"
                 >
-                  {isLoading ? 'Cargando...' : 'Cargar más artículos'}
+                  {isLoading ? 'Cargando...' : 'Cargar más noticias'}
                 </button>
               </div>
             )}

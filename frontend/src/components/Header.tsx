@@ -7,10 +7,11 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navLinks = [
-    { name: 'Oferta Turística', href: '/oferta' },
-    { name: 'Mapa Interactivo', href: '/mapa' },
-    { name: 'Calendario de Actividades', href: '/calendario' },
+    { name: 'Atractivos', href: '/atractivos' },
+    { name: 'Agenda Cultural', href: '/agenda-cultural' },
+    { name: 'Noticias', href: '/noticias' },
     { name: 'Blog', href: '/blog' },
+    { name: 'Mapa', href: '/mapa' },
   ];
 
   return (

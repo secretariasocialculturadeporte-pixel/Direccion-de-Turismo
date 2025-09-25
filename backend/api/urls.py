@@ -13,6 +13,10 @@ from .views import (
     AtractivoTuristicoDetailView,
     LocationListView,
     ElementoGuardadoViewSet,
+    VideoListView,
+    CategoriaPrestadorListView,
+    PrestadorServicioPublicListView,
+    PrestadorServicioPublicDetailView,
 )
 
 # Creamos un router para registrar los ViewSets
@@ -30,9 +34,13 @@ urlpatterns = [
     path('', include(router.urls)),
 
     # --- Vistas Públicas ---
+    path('prestadores/categorias/', CategoriaPrestadorListView.as_view(), name='prestador-categorias-list'),
+    path('prestadores/', PrestadorServicioPublicListView.as_view(), name='prestador-public-list'),
+    path('prestadores/<int:pk>/', PrestadorServicioPublicDetailView.as_view(), name='prestador-public-detail'),
     path('publicaciones/', PublicacionListView.as_view(), name='publicaciones-list'),
     path('publicaciones/<slug:slug>/', PublicacionDetailView.as_view(), name='publicaciones-detail'),
     path('consejo-consultivo/', ConsejoConsultivoListView.as_view(), name='consejo-consultivo-list'),
+    path('videos/', VideoListView.as_view(), name='videos-list'),
     path('atractivos/', AtractivoTuristicoListView.as_view(), name='atractivos-list'),
     path('atractivos/<slug:slug>/', AtractivoTuristicoDetailView.as_view(), name='atractivos-detail'),
     path('locations/', LocationListView.as_view(), name='locations-list'),

@@ -100,7 +100,7 @@ class AdminAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 1)
-         self.assertEqual(response.data['results'][0]['nombre_negocio'], "Hotel La Roca")
+        self.assertEqual(response.data['results'][0]['nombre_negocio'], "Hotel La Roca")
 
 
 class ContenidoMunicipioAPITests(APITestCase):
@@ -111,7 +111,7 @@ class ContenidoMunicipioAPITests(APITestCase):
         self.admin_user = CustomUser.objects.create_superuser('admin', 'admin@test.com', 'password')
         self.turista_user = CustomUser.objects.create_user(
             'turista', 'turista@test.com', 'password', role=CustomUser.Role.TURISTA
-        ) 
+        )
 
         self.admin_token = Token.objects.create(user=self.admin_user)
         self.turista_token = Token.objects.create(user=self.turista_user)
@@ -132,15 +132,13 @@ class ContenidoMunicipioAPITests(APITestCase):
     def test_public_can_list_content(self):
         """Cualquier usuario (incluso no autenticado) puede listar el contenido."""
         response = self.client.get(self.list_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
-  def test_public_can_list_content(self):
-        """Cualquier usuario (incluso no autenticado) puede listar el contenido."""
-        response = self.client.get(self.list_url)
         expected_count = ContenidoMunicipio.objects.count()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], expected_count)
-        
+
+    def test_admin_can_create_content(self):
+        """Un admin puede crear nuevo contenido."""
+        initial_count = ContenidoMunicipio.objects.count()
         data = {
             'seccion': ContenidoMunicipio.Seccion.ALOJAMIENTO,
             'titulo': 'Hoteles de Lujo',
@@ -150,12 +148,14 @@ class ContenidoMunicipioAPITests(APITestCase):
         response = self.client.post(self.admin_list_url, data, **self._get_auth_header(self.admin_token))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(ContenidoMunicipio.objects.count(), initial_count + 1)
- 
+
     def test_turista_cannot_create_content(self):
         """Un turista no puede crear contenido."""
+        initial_count = ContenidoMunicipio.objects.count()
         data = {'seccion': 'OTRA', 'titulo': 'Intento', 'contenido': '...'}
         response = self.client.post(self.admin_list_url, data, **self._get_auth_header(self.turista_token))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(ContenidoMunicipio.objects.count(), initial_count)
 
     def test_admin_can_update_content(self):
         """Un admin puede actualizar un bloque de contenido."""

@@ -9,6 +9,8 @@ from .models import (
     Publicacion,
     Video,
     ConsejoConsultivo,
+    AtractivoTuristico,
+    ImagenAtractivo,
 )
 
 @admin.register(CustomUser)
@@ -101,3 +103,31 @@ class ConsejoConsultivoAdmin(admin.ModelAdmin):
     list_display = ('titulo', 'fecha_publicacion')
     search_fields = ('titulo', 'contenido')
     date_hierarchy = 'fecha_publicacion'
+
+
+class ImagenAtractivoInline(admin.TabularInline):
+    """Permite editar imágenes de la galería directamente en la página del atractivo."""
+    model = ImagenAtractivo
+    extra = 1 # Muestra un campo para subir una nueva imagen por defecto.
+
+
+@admin.register(AtractivoTuristico)
+class AtractivoTuristicoAdmin(admin.ModelAdmin):
+    """
+    Personalización del panel para AtractivoTuristico.
+    """
+    list_display = ('nombre', 'categoria_color', 'fecha_actualizacion')
+    list_filter = ('categoria_color',)
+    search_fields = ('nombre', 'descripcion', 'como_llegar')
+    prepopulated_fields = {'slug': ('nombre',)}
+    inlines = [ImagenAtractivoInline]
+    readonly_fields = ('fecha_creacion', 'fecha_actualizacion')
+
+    def save_model(self, request, obj, form, change):
+        """
+        Al guardar el objeto, si es nuevo, se le asigna el usuario
+        actual como autor.
+        """
+        if not obj.pk:
+            obj.autor = request.user
+        super().save_model(request, obj, form, change)

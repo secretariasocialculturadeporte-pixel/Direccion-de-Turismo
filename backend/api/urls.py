@@ -8,6 +8,8 @@ from .views import (
     PublicacionListView,
     PublicacionDetailView,
     ConsejoConsultivoListView,
+    AtractivoTuristicoListView,
+    AtractivoTuristicoDetailView,
 )
 
 urlpatterns = [
@@ -22,4 +24,6 @@ urlpatterns = [
     path('publicaciones/', PublicacionListView.as_view(), name='publicaciones-list'),
     path('publicaciones/<slug:slug>/', PublicacionDetailView.as_view(), name='publicaciones-detail'),
     path('consejo-consultivo/', ConsejoConsultivoListView.as_view(), name='consejo-consultivo-list'),
+    path('atractivos/', AtractivoTuristicoListView.as_view(), name='atractivos-list'),
+    path('atractivos/<slug:slug>/', AtractivoTuristicoDetailView.as_view(), name='atractivos-detail'),
 ]

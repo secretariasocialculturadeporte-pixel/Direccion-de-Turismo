@@ -15,6 +15,10 @@ def documentos_directory_path(instance, filename):
     # file will be uploaded to MEDIA_ROOT/prestadores/<username>/documentos/<filename>
     return f'prestadores/{instance.prestador.usuario.username}/documentos/{filename}'
 
+def atractivo_directory_path(instance, filename):
+    # file will be uploaded to MEDIA_ROOT/atractivos/<slug_atractivo>/<filename>
+    return f'atractivos/{instance.atractivo.slug}/{filename}'
+
 
 class CustomUser(AbstractUser):
     """
@@ -172,3 +176,53 @@ class ConsejoConsultivo(models.Model):
         verbose_name = "Publicación del Consejo Consultivo"
         verbose_name_plural = "Publicaciones del Consejo Consultivo"
         ordering = ['-fecha_publicacion']
+
+
+class AtractivoTuristico(models.Model):
+    """
+    Modelo para los atractivos turísticos de Puerto Gaitán.
+    """
+    class CategoriaColor(models.TextChoices):
+        AMARILLO = "AMARILLO", _("Cultural/Histórico")
+        ROJO = "ROJO", _("Urbano/Parque")
+        BLANCO = "BLANCO", _("Natural")
+
+    nombre = models.CharField(max_length=200, unique=True)
+    slug = models.SlugField(max_length=220, unique=True, help_text="Versión del nombre amigable para URLs")
+    descripcion = models.TextField()
+    como_llegar = models.TextField(help_text="Instrucciones sobre cómo llegar al atractivo.")
+    ubicacion_mapa = models.CharField(max_length=255, blank=True, null=True, help_text="Coordenadas (lat,lng) para Google Maps")
+    categoria_color = models.CharField(
+        _("Categoría de Color"),
+        max_length=10,
+        choices=CategoriaColor.choices
+    )
+    autor = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        limit_choices_to={'role__in': [CustomUser.Role.ADMIN, CustomUser.Role.FUNCIONARIO]},
+        help_text="Funcionario o Administrador que creó el registro."
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.nombre
+
+    class Meta:
+        verbose_name = "Atractivo Turístico"
+        verbose_name_plural = "Atractivos Turísticos"
+        ordering = ['nombre']
+
+
+class ImagenAtractivo(models.Model):
+    """
+    Modelo para las imágenes de la galería de un atractivo turístico.
+    """
+    atractivo = models.ForeignKey(AtractivoTuristico, on_delete=models.CASCADE, related_name="imagenes")
+    imagen = models.ImageField(upload_to=atractivo_directory_path)
+    alt_text = models.CharField(max_length=255, blank=True, help_text="Texto alternativo para accesibilidad y SEO")
+
+    def __str__(self):
+        return f"Imagen de {self.atractivo.nombre}"

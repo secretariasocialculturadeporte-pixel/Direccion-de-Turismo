@@ -1,7 +1,10 @@
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
-from .models import PrestadorServicio, ImagenGaleria, DocumentoLegalizacion, Publicacion, ConsejoConsultivo
+from .models import (
+    PrestadorServicio, ImagenGaleria, DocumentoLegalizacion, Publicacion,
+    ConsejoConsultivo, AtractivoTuristico
+)
 from .serializers import (
     PrestadorServicioSerializer,
     ImagenGaleriaSerializer,
@@ -9,6 +12,8 @@ from .serializers import (
     PublicacionListSerializer,
     PublicacionDetailSerializer,
     ConsejoConsultivoSerializer,
+    AtractivoTuristicoListSerializer,
+    AtractivoTuristicoDetailSerializer,
 )
 
 class PrestadorProfileView(generics.RetrieveUpdateAPIView):
@@ -139,3 +144,29 @@ class ConsejoConsultivoListView(generics.ListAPIView):
     queryset = ConsejoConsultivo.objects.all().order_by('-fecha_publicacion')
     serializer_class = ConsejoConsultivoSerializer
     permission_classes = [AllowAny]
+
+
+class AtractivoTuristicoListView(generics.ListAPIView):
+    """
+    Vista pública para listar todos los atractivos turísticos.
+    Permite filtrar por categoria_color. Ej: /api/atractivos/?categoria=AMARILLO
+    """
+    serializer_class = AtractivoTuristicoListSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        queryset = AtractivoTuristico.objects.all()
+        categoria = self.request.query_params.get('categoria', None)
+        if categoria:
+            queryset = queryset.filter(categoria_color__iexact=categoria)
+        return queryset
+
+
+class AtractivoTuristicoDetailView(generics.RetrieveAPIView):
+    """
+    Vista pública para ver el detalle de un atractivo turístico por su slug.
+    """
+    queryset = AtractivoTuristico.objects.all()
+    serializer_class = AtractivoTuristicoDetailSerializer
+    permission_classes = [AllowAny]
+    lookup_field = 'slug'

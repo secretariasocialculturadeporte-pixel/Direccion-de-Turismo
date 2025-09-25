@@ -1,6 +1,9 @@
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from rest_framework import serializers
-from .models import CustomUser, PrestadorServicio, ImagenGaleria, DocumentoLegalizacion, Publicacion, ConsejoConsultivo
+from .models import (
+    CustomUser, PrestadorServicio, ImagenGaleria, DocumentoLegalizacion, Publicacion,
+    ConsejoConsultivo, AtractivoTuristico, ImagenAtractivo
+)
 
 class ConsejoConsultivoSerializer(serializers.ModelSerializer):
     """
@@ -9,6 +12,47 @@ class ConsejoConsultivoSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConsejoConsultivo
         fields = ['id', 'titulo', 'contenido', 'fecha_publicacion', 'documento_adjunto']
+
+
+class ImagenAtractivoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImagenAtractivo
+        fields = ['id', 'imagen', 'alt_text']
+
+
+class AtractivoTuristicoListSerializer(serializers.ModelSerializer):
+    """
+    Serializador para la lista pública de atractivos turísticos.
+    """
+    imagen_principal = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AtractivoTuristico
+        fields = ['id', 'nombre', 'slug', 'categoria_color', 'imagen_principal']
+
+    def get_imagen_principal(self, obj):
+        # Devuelve la URL de la primera imagen de la galería, o None si no hay.
+        primera_imagen = obj.imagenes.first()
+        if primera_imagen:
+            request = self.context.get('request')
+            return request.build_absolute_uri(primera_imagen.imagen.url)
+        return None
+
+
+class AtractivoTuristicoDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializador para el detalle público de un atractivo turístico.
+    """
+    imagenes = ImagenAtractivoSerializer(many=True, read_only=True)
+    categoria_color_display = serializers.CharField(source='get_categoria_color_display', read_only=True)
+
+    class Meta:
+        model = AtractivoTuristico
+        fields = [
+            'id', 'nombre', 'slug', 'descripcion', 'como_llegar',
+            'ubicacion_mapa', 'categoria_color', 'categoria_color_display', 'imagenes'
+        ]
+
 
 class PublicacionListSerializer(serializers.ModelSerializer):
     """

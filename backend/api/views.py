@@ -6,7 +6,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from dj_rest_auth.registration.views import RegisterView
 from .models import (
     PrestadorServicio, ImagenGaleria, DocumentoLegalizacion, Publicacion,
-    ConsejoConsultivo, AtractivoTuristico, ElementoGuardado
+    ConsejoConsultivo, AtractivoTuristico, ElementoGuardado, CategoriaPrestador, Video
 )
 from .serializers import (
     PrestadorServicioSerializer,
@@ -14,6 +14,7 @@ from .serializers import (
     DocumentoLegalizacionSerializer,
     PublicacionListSerializer,
     PublicacionDetailSerializer,
+    VideoSerializer,
     ConsejoConsultivoSerializer,
     AtractivoTuristicoListSerializer,
     AtractivoTuristicoDetailSerializer,
@@ -21,6 +22,9 @@ from .serializers import (
     TuristaRegisterSerializer,
     ElementoGuardadoSerializer,
     ElementoGuardadoCreateSerializer,
+    CategoriaPrestadorSerializer,
+    PrestadorServicioPublicListSerializer,
+    PrestadorServicioPublicDetailSerializer,
 )
 from .permissions import IsTurista
 
@@ -184,6 +188,57 @@ class ConsejoConsultivoListView(generics.ListAPIView):
     queryset = ConsejoConsultivo.objects.all().order_by('-fecha_publicacion')
     serializer_class = ConsejoConsultivoSerializer
     permission_classes = [AllowAny]
+
+
+class VideoListView(generics.ListAPIView):
+    """
+    Vista pública para listar todos los videos.
+    """
+    queryset = Video.objects.all().order_by('-fecha_publicacion')
+    serializer_class = VideoSerializer
+    permission_classes = [AllowAny]
+
+
+class CategoriaPrestadorListView(generics.ListAPIView):
+    """
+    Vista pública para listar todas las categorías de prestadores de servicios.
+    """
+    queryset = CategoriaPrestador.objects.all().order_by('nombre')
+    serializer_class = CategoriaPrestadorSerializer
+    permission_classes = [AllowAny]
+
+
+class PrestadorServicioPublicListView(generics.ListAPIView):
+    """
+    Vista pública para listar todos los prestadores de servicios aprobados.
+    Permite filtrar por slug de categoría. Ej: /api/prestadores/?categoria=hoteles
+    """
+    serializer_class = PrestadorServicioPublicListSerializer
+    permission_classes = [AllowAny]
+    filter_backends = [SearchFilter, OrderingFilter]
+    search_fields = ['nombre_negocio', 'descripcion']
+    ordering_fields = ['nombre_negocio']
+
+    def get_queryset(self):
+        """
+        Filtra para mostrar solo los prestadores aprobados.
+        También filtra por 'categoria' si se pasa el slug como parámetro en la URL.
+        """
+        queryset = PrestadorServicio.objects.filter(aprobado=True)
+        categoria_slug = self.request.query_params.get('categoria', None)
+        if categoria_slug:
+            queryset = queryset.filter(categoria__slug=categoria_slug)
+        return queryset
+
+
+class PrestadorServicioPublicDetailView(generics.RetrieveAPIView):
+    """
+    Vista pública para ver el detalle de un prestador de servicios por su ID.
+    """
+    queryset = PrestadorServicio.objects.filter(aprobado=True)
+    serializer_class = PrestadorServicioPublicDetailSerializer
+    permission_classes = [AllowAny]
+    lookup_field = 'pk'
 
 
 class AtractivoTuristicoListView(generics.ListAPIView):

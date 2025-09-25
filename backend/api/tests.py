@@ -100,7 +100,8 @@ class AdminAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['nombre_negocio'], "Hotel La Roca")
+        
+  self.assertEqual(response.data['results'][0]['nombre_negocio'], "Hotel La Roca")
 
 
 class ContenidoMunicipioAPITests(APITestCase):
@@ -109,7 +110,9 @@ class ContenidoMunicipioAPITests(APITestCase):
     """
     def setUp(self):
         self.admin_user = CustomUser.objects.create_superuser('admin', 'admin@test.com', 'password')
-        self.turista_user = CustomUser.objects.create_user('turista', 'turista@test.com', 'password', role=CustomUser.Role.TURISTA)
+        self.turista_user = CustomUser.objects.create_user(
+            'turista', 'turista@test.com', 'password', role=CustomUser.Role.TURISTA
+        )
 
         self.admin_token = Token.objects.create(user=self.admin_user)
         self.turista_token = Token.objects.create(user=self.turista_user)

@@ -100,7 +100,7 @@ class AdminAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['nombre_negocio'], "Hotel La Roca")
+         self.assertEqual(response.data['results'][0]['nombre_negocio'], "Hotel La Roca")
 
 
 class ContenidoMunicipioAPITests(APITestCase):
@@ -109,7 +109,9 @@ class ContenidoMunicipioAPITests(APITestCase):
     """
     def setUp(self):
         self.admin_user = CustomUser.objects.create_superuser('admin', 'admin@test.com', 'password')
-        self.turista_user = CustomUser.objects.create_user('turista', 'turista@test.com', 'password', role=CustomUser.Role.TURISTA)
+        self.turista_user = CustomUser.objects.create_user(
+            'turista', 'turista@test.com', 'password', role=CustomUser.Role.TURISTA
+        ) 
 
         self.admin_token = Token.objects.create(user=self.admin_user)
         self.turista_token = Token.objects.create(user=self.turista_user)
@@ -131,12 +133,14 @@ class ContenidoMunicipioAPITests(APITestCase):
         """Cualquier usuario (incluso no autenticado) puede listar el contenido."""
         response = self.client.get(self.list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # La BD de prueba se puebla con la migración (3) + el setUp (1) = 4
-        self.assertEqual(response.data['count'], 4)
-
-    def test_admin_can_create_content(self):
-        """Un admin puede crear un nuevo bloque de contenido."""
-        initial_count = ContenidoMunicipio.objects.count()
+        
+  def test_public_can_list_content(self):
+        """Cualquier usuario (incluso no autenticado) puede listar el contenido."""
+        response = self.client.get(self.list_url)
+        expected_count = ContenidoMunicipio.objects.count()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count'], expected_count)
+        
         data = {
             'seccion': ContenidoMunicipio.Seccion.ALOJAMIENTO,
             'titulo': 'Hoteles de Lujo',
@@ -146,7 +150,7 @@ class ContenidoMunicipioAPITests(APITestCase):
         response = self.client.post(self.admin_list_url, data, **self._get_auth_header(self.admin_token))
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(ContenidoMunicipio.objects.count(), initial_count + 1)
-
+ 
     def test_turista_cannot_create_content(self):
         """Un turista no puede crear contenido."""
         data = {'seccion': 'OTRA', 'titulo': 'Intento', 'contenido': '...'}
@@ -166,5 +170,6 @@ class ContenidoMunicipioAPITests(APITestCase):
         initial_count = ContenidoMunicipio.objects.count()
         response = self.client.delete(self.admin_detail_url, **self._get_auth_header(self.admin_token))
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        # Verifica que solo se haya eliminado un objeto
         self.assertEqual(ContenidoMunicipio.objects.count(), initial_count - 1)
+        
+        

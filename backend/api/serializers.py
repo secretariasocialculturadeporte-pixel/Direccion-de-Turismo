@@ -296,6 +296,7 @@ class AdminPrestadorServicioSerializer(serializers.ModelSerializer):
             'categoria_nombre',
             'usuario_email'
         ]
+ 
 
 
 class ContenidoMunicipioSerializer(serializers.ModelSerializer):

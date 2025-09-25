@@ -372,9 +372,8 @@ class AdminApprovePrestadorView(views.APIView):
 
         prestador.aprobado = True
         prestador.save(update_fields=['aprobado'])
-
-        return Response({'status': 'Prestador aprobado con éxito.'}, status=status.HTTP_200_OK)
-
+         return Response({'status': 'Prestador aprobado con éxito.'}, status=status.HTTP_200_OK)
+       
 
 class ContenidoMunicipioViewSet(viewsets.ModelViewSet):
     """

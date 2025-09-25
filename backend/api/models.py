@@ -293,6 +293,7 @@ class ContenidoMunicipio(models.Model):
         CONTACTOS = "CONTACTOS", _("Contactos de Interés")
         FINANZAS = "FINANZAS", _("Entidades Financieras")
         SECRETARIA_TURISMO = "SECRETARIA_TURISMO", _("Secretaría de Turismo y Desarrollo Económico")
+ 
         OTRA = "OTRA", _("Otra Sección")
 
     seccion = models.CharField(

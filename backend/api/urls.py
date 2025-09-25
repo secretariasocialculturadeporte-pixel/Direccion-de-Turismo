@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+from .views import (
     PrestadorProfileView,
     ImagenGaleriaView,
     ImagenGaleriaDetailView,
@@ -10,6 +11,7 @@ from .views import (
     ConsejoConsultivoListView,
     AtractivoTuristicoListView,
     AtractivoTuristicoDetailView,
+    LocationListView,
 )
 
 urlpatterns = [
@@ -26,4 +28,5 @@ urlpatterns = [
     path('consejo-consultivo/', ConsejoConsultivoListView.as_view(), name='consejo-consultivo-list'),
     path('atractivos/', AtractivoTuristicoListView.as_view(), name='atractivos-list'),
     path('atractivos/<slug:slug>/', AtractivoTuristicoDetailView.as_view(), name='atractivos-detail'),
+    path('locations/', LocationListView.as_view(), name='locations-list'),
 ]

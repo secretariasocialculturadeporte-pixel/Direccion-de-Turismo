@@ -14,6 +14,19 @@ class ConsejoConsultivoSerializer(serializers.ModelSerializer):
         fields = ['id', 'titulo', 'contenido', 'fecha_publicacion', 'documento_adjunto']
 
 
+class LocationSerializer(serializers.Serializer):
+    """
+    Serializador genérico para representar cualquier punto geolocalizado en el mapa.
+    No está atado a un modelo, lo que permite combinar diferentes tipos de ubicaciones.
+    """
+    id = serializers.CharField()
+    nombre = serializers.CharField()
+    lat = serializers.FloatField()
+    lng = serializers.FloatField()
+    tipo = serializers.CharField()
+    url_detalle = serializers.CharField()
+
+
 class ImagenAtractivoSerializer(serializers.ModelSerializer):
     class Meta:
         model = ImagenAtractivo

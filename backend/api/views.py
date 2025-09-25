@@ -1,4 +1,5 @@
-from rest_framework import generics
+from rest_framework import generics, views
+from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import (
@@ -14,6 +15,7 @@ from .serializers import (
     ConsejoConsultivoSerializer,
     AtractivoTuristicoListSerializer,
     AtractivoTuristicoDetailSerializer,
+    LocationSerializer,
 )
 
 class PrestadorProfileView(generics.RetrieveUpdateAPIView):
@@ -170,3 +172,59 @@ class AtractivoTuristicoDetailView(generics.RetrieveAPIView):
     serializer_class = AtractivoTuristicoDetailSerializer
     permission_classes = [AllowAny]
     lookup_field = 'slug'
+
+
+class LocationListView(views.APIView):
+    """
+    Vista pública para obtener una lista unificada de todas las ubicaciones
+    geográficas (Prestadores y Atractivos) para el mapa interactivo.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        locations = []
+
+        # 1. Obtener Prestadores de Servicio (solo los aprobados y con ubicación)
+        prestadores = PrestadorServicio.objects.filter(
+            aprobado=True,
+            ubicacion_mapa__isnull=False
+        ).exclude(ubicacion_mapa__exact='')
+
+        for p in prestadores:
+            try:
+                # Asumimos que las coordenadas están en formato "lat,lng"
+                lat, lng = map(float, p.ubicacion_mapa.split(','))
+                locations.append({
+                    'id': f'prestador_{p.id}',
+                    'nombre': p.nombre_negocio,
+                    'lat': lat,
+                    'lng': lng,
+                    'tipo': p.categoria.slug if p.categoria else 'prestador',
+                    # No tenemos página de detalle para prestador aún, así que no se añade URL
+                    'url_detalle': None
+                })
+            except (ValueError, AttributeError):
+                # Ignorar si el formato de coordenadas es incorrecto o si no hay categoría
+                continue
+
+        # 2. Obtener Atractivos Turísticos (con ubicación)
+        atractivos = AtractivoTuristico.objects.exclude(
+            ubicacion_mapa__isnull=True
+        ).exclude(ubicacion_mapa__exact='')
+
+        for a in atractivos:
+            try:
+                lat, lng = map(float, a.ubicacion_mapa.split(','))
+                locations.append({
+                    'id': f'atractivo_{a.id}',
+                    'nombre': a.nombre,
+                    'lat': lat,
+                    'lng': lng,
+                    'tipo': f'atractivo_{a.categoria_color.lower()}',
+                    'url_detalle': f'/atractivos/{a.slug}'
+                })
+            except (ValueError, AttributeError):
+                continue
+
+        serializer = LocationSerializer(locations, many=True)
+        return Response(serializer.data)

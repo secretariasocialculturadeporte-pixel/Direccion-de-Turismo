@@ -1,5 +1,7 @@
 from rest_framework import generics, views, viewsets
 from rest_framework.response import Response
+from rest_framework import generics, views, viewsets, status
+from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -25,8 +27,9 @@ from .serializers import (
     CategoriaPrestadorSerializer,
     PrestadorServicioPublicListSerializer,
     PrestadorServicioPublicDetailSerializer,
+    AdminPrestadorServicioSerializer,
 )
-from .permissions import IsTurista
+from .permissions import IsTurista, IsAdminOrFuncionario
 
 class PrestadorProfileView(generics.RetrieveUpdateAPIView):
     """
@@ -322,3 +325,50 @@ class LocationListView(views.APIView):
 
         serializer = LocationSerializer(locations, many=True)
         return Response(serializer.data)
+
+
+# --- Vistas de Administración ---
+
+class AdminPrestadorListView(generics.ListAPIView):
+    """
+    Vista para que el administrador/funcionario vea todos los prestadores.
+    Permite filtrar por estado de aprobación. Ej: /api/admin/prestadores/?aprobado=false
+    """
+    queryset = PrestadorServicio.objects.all().order_by('-fecha_creacion')
+    serializer_class = AdminPrestadorServicioSerializer
+    permission_classes = [IsAdminOrFuncionario]
+    filter_backends = [OrderingFilter]
+    ordering_fields = ['fecha_creacion', 'nombre_negocio']
+
+    def get_queryset(self):
+        """
+        Filtra por el estado de aprobación si se provee el parámetro en la URL.
+        """
+        queryset = super().get_queryset()
+        aprobado_param = self.request.query_params.get('aprobado')
+        if aprobado_param is not None:
+            # Convertimos el string 'true'/'false' a booleano
+            aprobado = aprobado_param.lower() == 'true'
+            queryset = queryset.filter(aprobado=aprobado)
+        return queryset
+
+
+class AdminApprovePrestadorView(views.APIView):
+    """
+    Vista para que un administrador/funcionario apruebe un prestador de servicios.
+    """
+    permission_classes = [IsAdminOrFuncionario]
+
+    def patch(self, request, pk, *args, **kwargs):
+        """
+        Maneja la acción de aprobación.
+        """
+        try:
+            prestador = PrestadorServicio.objects.get(pk=pk)
+        except PrestadorServicio.DoesNotExist:
+            return Response({'error': 'Prestador no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        prestador.aprobado = True
+        prestador.save(update_fields=['aprobado'])
+
+        return Response({'status': 'Prestador aprobado con éxito.'}, status=status.HTTP_200_OK)

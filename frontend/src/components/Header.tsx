@@ -7,6 +7,9 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navLinks = [
+    { name: 'El Municipio', href: '/municipio' },
+    { name: 'Directorio Turístico', href: '/directorio' },
+    { name: 'Artesanos', href: '/directorio/artesanos' },
     { name: 'Atractivos', href: '/atractivos' },
     { name: 'Agenda Cultural', href: '/agenda-cultural' },
     { name: 'Noticias', href: '/noticias' },

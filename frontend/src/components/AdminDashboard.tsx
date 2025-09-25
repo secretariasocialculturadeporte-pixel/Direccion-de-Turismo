@@ -1,6 +1,5 @@
 "use client";
-
-import React, { useState, useEffect, useCallback } from "react";
+ import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { useAuth } from "@/contexts/AuthContext";
 import MunicipioContentManager from "./MunicipioContentManager";
@@ -165,10 +164,47 @@ export default function AdminDashboard() {
     }
   };
 
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold mb-6">Panel de Administración</h1>
+
+      <div className="flex space-x-4 mb-6">
+        <button
+          onClick={() => setActiveTab("prestadores")}
+          className={`px-4 py-2 rounded-md ${
+            activeTab === "prestadores"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 text-gray-700"
+          }`}
+        >
+          Prestadores
+        </button>
+        <button
+          onClick={() => setActiveTab("contenido")}
+          className={`px-4 py-2 rounded-md ${
+            activeTab === "contenido"
+              ? "bg-blue-600 text-white"
+              : "bg-gray-200 text-gray-700"
+          }`}
+        >
+          Contenido Municipio
+        </button>
+      </div>
+
+      {renderContent()}
+    </div>
+  );
+}
+        return <MunicipioContentManager />;
+      default:
+        return null;
+    }
+  };
+
   const getTabClass = (tabName: AdminTab) => {
     return `px-4 py-2 font-semibold rounded-t-lg ${
       activeTab === tabName
-        ? "bg-white border-b-0 border-l border-t border-r"
+   ? "bg-white border-b-0 border-l border-t border-r"
         : "bg-gray-100 hover:bg-gray-200"
     }`;
   };
@@ -178,21 +214,23 @@ export default function AdminDashboard() {
       <div className="border-b">
         <nav className="-mb-px flex space-x-2">
           <button
-            onClick={() => setActiveTab("prestadores")}
+  onClick={() => setActiveTab("prestadores")}
             className={getTabClass("prestadores")}
           >
             Gestión de Prestadores
           </button>
           <button
-            onClick={() => setActiveTab("contenido")}
+                  onClick={() => setActiveTab("contenido")}
             className={getTabClass("contenido")}
           >
             Gestión de Contenido
           </button>
         </nav>
       </div>
-      <div className="mt-4">{renderContent()}</div>
-    </div>
+      <div className="mt-4">
+  {renderContent()}
+</div>
+       
   );
 }
-    
+ 

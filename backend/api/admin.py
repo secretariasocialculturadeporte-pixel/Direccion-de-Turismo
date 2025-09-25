@@ -1,0 +1,103 @@
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from .models import (
+    CustomUser,
+    CategoriaPrestador,
+    PrestadorServicio,
+    ImagenGaleria,
+    DocumentoLegalizacion,
+    Publicacion,
+    Video,
+    ConsejoConsultivo,
+)
+
+@admin.register(CustomUser)
+class CustomUserAdmin(UserAdmin):
+    """
+    Personalización del panel de administración para el modelo CustomUser.
+    """
+    model = CustomUser
+    # Añadimos el campo 'role' a los fieldsets para que se pueda editar
+    fieldsets = UserAdmin.fieldsets + (
+        ("Roles y Permisos", {"fields": ("role",)}),
+    )
+    add_fieldsets = UserAdmin.add_fieldsets + (
+        ("Roles y Permisos", {"fields": ("role",)}),
+    )
+    # Mostramos el rol en la lista de usuarios
+    list_display = ["username", "email", "first_name", "last_name", "role", "is_staff"]
+    list_filter = ["role", "is_staff", "is_superuser", "is_active", "groups"]
+
+
+class ImagenGaleriaInline(admin.TabularInline):
+    """Permite editar imágenes de la galería directamente en el perfil del prestador."""
+    model = ImagenGaleria
+    extra = 1  # Cuántos campos para subir imágenes mostrar por defecto
+
+
+class DocumentoLegalizacionInline(admin.TabularInline):
+    """Permite editar documentos directamente en el perfil del prestador."""
+    model = DocumentoLegalizacion
+    extra = 1
+
+
+@admin.register(PrestadorServicio)
+class PrestadorServicioAdmin(admin.ModelAdmin):
+    """
+    Personalización del panel para PrestadorServicio.
+    """
+    list_display = ('nombre_negocio', 'usuario', 'categoria', 'aprobado', 'fecha_creacion')
+    list_filter = ('aprobado', 'categoria')
+    search_fields = ('nombre_negocio', 'usuario__username', 'descripcion')
+    readonly_fields = ('fecha_creacion', 'fecha_actualizacion')
+    inlines = [ImagenGaleriaInline, DocumentoLegalizacionInline]
+    actions = ['aprobar_prestadores']
+
+    def aprobar_prestadores(self, request, queryset):
+        """Acción para aprobar los prestadores seleccionados."""
+        queryset.update(aprobado=True)
+    aprobar_prestadores.short_description = "Aprobar perfiles de prestadores seleccionados"
+
+
+@admin.register(CategoriaPrestador)
+class CategoriaPrestadorAdmin(admin.ModelAdmin):
+    """
+    Personalización del panel para CategoriaPrestador.
+    """
+    list_display = ('nombre', 'slug')
+    prepopulated_fields = {'slug': ('nombre',)}
+
+
+@admin.register(Publicacion)
+class PublicacionAdmin(admin.ModelAdmin):
+    """
+    Personalización del panel para Publicaciones (Eventos, Noticias, Blog).
+    """
+    list_display = ('titulo', 'tipo', 'es_publicado', 'autor', 'fecha_publicacion')
+    list_filter = ('tipo', 'es_publicado')
+    search_fields = ('titulo', 'contenido')
+    prepopulated_fields = {'slug': ('titulo',)}
+    date_hierarchy = 'fecha_publicacion'
+
+
+@admin.register(Video)
+class VideoAdmin(admin.ModelAdmin):
+    """
+    Personalización del panel para Videos.
+    """
+    list_display = ('titulo', 'url_youtube', 'fecha_publicacion')
+    search_fields = ('titulo', 'descripcion')
+
+# Los modelos ImagenGaleria y DocumentoLegalizacion se gestionan a través de los inlines,
+# pero también se pueden registrar para tener una gestión individual si es necesario.
+admin.site.register(ImagenGaleria)
+admin.site.register(DocumentoLegalizacion)
+
+@admin.register(ConsejoConsultivo)
+class ConsejoConsultivoAdmin(admin.ModelAdmin):
+    """
+    Personalización del panel para el Consejo Consultivo.
+    """
+    list_display = ('titulo', 'fecha_publicacion')
+    search_fields = ('titulo', 'contenido')
+    date_hierarchy = 'fecha_publicacion'

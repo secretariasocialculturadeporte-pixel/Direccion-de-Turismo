@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { getCategorias, getPrestadores, Categoria, PrestadorPublico } from '@/services/api';
+import { useDebounce } from '@/hooks/useDebounce';
 
 // Un componente de esqueleto para la tarjeta del prestador
 function PrestadorCardSkeleton() {
@@ -22,19 +23,24 @@ function OfertaContent() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [prestadores, setPrestadores] = useState<PrestadorPublico[]>([]);
   const [selectedCategoria, setSelectedCategoria] = useState<string | undefined>(undefined);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const debouncedSearchTerm = useDebounce(searchTerm, 500); // 500ms de retardo
+
+  // Carga inicial de categorías y prestadores
   useEffect(() => {
     async function loadInitialData() {
       try {
         setLoading(true);
-        const [fetchedCategorias, fetchedPrestadores] = await Promise.all([
-          getCategorias(),
-          getPrestadores(),
-        ]);
-        setCategorias(fetchedCategorias);
-        setPrestadores(fetchedPrestadores);
+        const fetchedCategorias = await getCategorias();
+        // Excluimos a los artesanos de la lista de filtros principal
+        setCategorias(fetchedCategorias.filter(c => c.slug !== 'artesanos'));
+
+        const fetchedPrestadores = await getPrestadores();
+        setPrestadores(fetchedPrestadores.filter(p => p.categoria_nombre !== 'Artesanos'));
+
         setError(null);
       } catch (err) {
         setError('No se pudo cargar la información. Por favor, inténtalo de nuevo más tarde.');
@@ -46,12 +52,14 @@ function OfertaContent() {
     loadInitialData();
   }, []);
 
+  // Efecto para recargar los prestadores cuando cambia la categoría o el término de búsqueda
   useEffect(() => {
     async function loadPrestadores() {
       try {
         setLoading(true);
-        const fetchedPrestadores = await getPrestadores(selectedCategoria);
-        setPrestadores(fetchedPrestadores);
+        const fetchedPrestadores = await getPrestadores(selectedCategoria, debouncedSearchTerm);
+        // Nos aseguramos de que los artesanos no se muestren en esta vista
+        setPrestadores(fetchedPrestadores.filter(p => p.categoria_nombre !== 'Artesanos'));
         setError(null);
       } catch (err) {
         setError('No se pudo cargar los prestadores. Por favor, inténtalo de nuevo.');
@@ -60,33 +68,35 @@ function OfertaContent() {
         setLoading(false);
       }
     }
-    // No ejecutamos esto en la carga inicial, solo cuando cambia la categoría seleccionada
-    if (selectedCategoria !== undefined) {
-      loadPrestadores();
-    }
-  }, [selectedCategoria]);
+    loadPrestadores();
+  }, [selectedCategoria, debouncedSearchTerm]);
 
   const handleCategoriaClick = (slug: string | undefined) => {
     setSelectedCategoria(slug);
-    // Si el slug es undefined, volvemos a cargar todos
-    if (slug === undefined) {
-      setLoading(true);
-      getPrestadores()
-        .then(setPrestadores)
-        .catch(() => setError('Error al recargar los prestadores.'))
-        .finally(() => setLoading(false));
-    }
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-4xl font-bold text-center mb-8">Oferta Turística</h1>
+      <h1 className="text-4xl font-bold text-center mb-4">Directorio Turístico</h1>
+
+      {/* Barra de Búsqueda */}
+      <div className="w-full max-w-md mx-auto mb-8">
+        <input
+          type="text"
+          placeholder="¿Qué estás buscando? (ej. hotel, restaurante)"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
 
       {/* Filtros de Categoría */}
       <div className="flex flex-wrap justify-center gap-2 mb-8">
         <button
           onClick={() => handleCategoriaClick(undefined)}
-          className={`px-4 py-2 rounded-full text-sm font-semibold ${!selectedCategoria ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+          className={`px-4 py-2 rounded-full text-sm font-semibold ${
+            !selectedCategoria ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+          }`}
         >
           Todos
         </button>
@@ -94,7 +104,9 @@ function OfertaContent() {
           <button
             key={cat.id}
             onClick={() => handleCategoriaClick(cat.slug)}
-            className={`px-4 py-2 rounded-full text-sm font-semibold ${selectedCategoria === cat.slug ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+            className={`px-4 py-2 rounded-full text-sm font-semibold ${
+              selectedCategoria === cat.slug ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+            }`}
           >
             {cat.nombre}
           </button>
@@ -114,7 +126,11 @@ function OfertaContent() {
               <a className="border rounded-lg shadow-md hover:shadow-xl transition-shadow overflow-hidden group">
                 <div className="relative w-full h-48">
                   {prestador.imagen_principal ? (
-                    <img src={prestador.imagen_principal} alt={`Imagen de ${prestador.nombre_negocio}`} className="w-full h-full object-cover transition-transform group-hover:scale-110" />
+                    <img
+                      src={prestador.imagen_principal}
+                      alt={`Imagen de ${prestador.nombre_negocio}`}
+                      className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                    />
                   ) : (
                     <div className="w-full h-full bg-gray-200 flex items-center justify-center">
                       <span className="text-gray-500">Sin imagen</span>
@@ -129,7 +145,9 @@ function OfertaContent() {
             </Link>
           ))
         ) : (
-          <p className="text-center col-span-full">No se encontraron prestadores en esta categoría.</p>
+          <p className="text-center col-span-full">
+            No se encontraron resultados para tu búsqueda.
+          </p>
         )}
       </div>
     </div>
@@ -137,9 +155,9 @@ function OfertaContent() {
 }
 
 export default function OfertaPage() {
-    return (
-        <Suspense fallback={<div>Cargando...</div>}>
-            <OfertaContent />
-        </Suspense>
-    )
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <OfertaContent />
+    </Suspense>
+  );
 }

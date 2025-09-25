@@ -1,12 +1,15 @@
 from rest_framework import generics, views, viewsets
 from rest_framework.response import Response
+from rest_framework import generics, views, viewsets, status
+from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.filters import SearchFilter, OrderingFilter
 from dj_rest_auth.registration.views import RegisterView
 from .models import (
     PrestadorServicio, ImagenGaleria, DocumentoLegalizacion, Publicacion,
-    ConsejoConsultivo, AtractivoTuristico, ElementoGuardado, CategoriaPrestador, Video
+    ConsejoConsultivo, AtractivoTuristico, ElementoGuardado, CategoriaPrestador, Video,
+    ContenidoMunicipio
 )
 from .serializers import (
     PrestadorServicioSerializer,
@@ -25,8 +28,10 @@ from .serializers import (
     CategoriaPrestadorSerializer,
     PrestadorServicioPublicListSerializer,
     PrestadorServicioPublicDetailSerializer,
+    AdminPrestadorServicioSerializer,
+    ContenidoMunicipioSerializer,
 )
-from .permissions import IsTurista
+from .permissions import IsTurista, IsAdminOrFuncionario
 
 class PrestadorProfileView(generics.RetrieveUpdateAPIView):
     """
@@ -322,3 +327,78 @@ class LocationListView(views.APIView):
 
         serializer = LocationSerializer(locations, many=True)
         return Response(serializer.data)
+
+
+# --- Vistas de Administración ---
+
+class AdminPrestadorListView(generics.ListAPIView):
+    """
+    Vista para que el administrador/funcionario vea todos los prestadores.
+    Permite filtrar por estado de aprobación. Ej: /api/admin/prestadores/?aprobado=false
+    """
+    queryset = PrestadorServicio.objects.all().order_by('-fecha_creacion')
+    serializer_class = AdminPrestadorServicioSerializer
+    permission_classes = [IsAdminOrFuncionario]
+    filter_backends = [OrderingFilter]
+    ordering_fields = ['fecha_creacion', 'nombre_negocio']
+
+    def get_queryset(self):
+        """
+        Filtra por el estado de aprobación si se provee el parámetro en la URL.
+        """
+        queryset = super().get_queryset()
+        aprobado_param = self.request.query_params.get('aprobado')
+        if aprobado_param is not None:
+            # Convertimos el string 'true'/'false' a booleano
+            aprobado = aprobado_param.lower() == 'true'
+            queryset = queryset.filter(aprobado=aprobado)
+        return queryset
+
+
+class AdminApprovePrestadorView(views.APIView):
+    """
+    Vista para que un administrador/funcionario apruebe un prestador de servicios.
+    """
+    permission_classes = [IsAdminOrFuncionario]
+
+    def patch(self, request, pk, *args, **kwargs):
+        """
+        Maneja la acción de aprobación.
+        """
+        try:
+            prestador = PrestadorServicio.objects.get(pk=pk)
+        except PrestadorServicio.DoesNotExist:
+            return Response({'error': 'Prestador no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        prestador.aprobado = True
+        prestador.save(update_fields=['aprobado'])
+
+        return Response({'status': 'Prestador aprobado con éxito.'}, status=status.HTTP_200_OK)
+
+
+class ContenidoMunicipioViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gestionar el contenido general del municipio.
+    - Lectura (list, retrieve) es pública.
+    - Escritura (create, update, destroy) es solo para Admins/Funcionarios.
+    """
+    queryset = ContenidoMunicipio.objects.all().order_by('orden')
+    serializer_class = ContenidoMunicipioSerializer
+
+    def get_permissions(self):
+        """
+        Asigna permisos basados en la acción.
+        """
+        if self.action in ['list', 'retrieve']:
+            self.permission_classes = [AllowAny]
+        else:
+            self.permission_classes = [IsAdminOrFuncionario]
+        return super().get_permissions()
+
+    def get_serializer_context(self):
+        """
+        Pasa el request al serializador para que pueda acceder al usuario.
+        """
+        context = super().get_serializer_context()
+        context.update({'request': self.request})
+        return context

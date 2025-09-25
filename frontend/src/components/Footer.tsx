@@ -35,6 +35,7 @@ export default function Footer() {
               <li><Link href="/noticias" className="text-gray-400 hover:text-white">Noticias</Link></li>
               <li><Link href="/blog" className="text-gray-400 hover:text-white">Blog</Link></li>
               <li><Link href="/mapa" className="text-gray-400 hover:text-white">Mapa Interactivo</Link></li>
+              <li><Link href="/institucional/secretaria-turismo" className="text-gray-400 hover:text-white">Secretaría de Turismo</Link></li>
             </ul>
           </div>
 

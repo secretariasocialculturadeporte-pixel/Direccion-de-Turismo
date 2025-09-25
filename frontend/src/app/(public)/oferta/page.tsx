@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { getCategorias, getPrestadores, Categoria, PrestadorPublico } from '@/services/api';
-import { useDebounce } from '@/hooks/useDebounce';
+import useDebounce from '@/hooks/useDebounce';
 
 // Un componente de esqueleto para la tarjeta del prestador
 function PrestadorCardSkeleton() {

@@ -61,7 +61,7 @@ export default function BlogPage() {
         },
       });
 
-      const resultsWithExcerpts = response.data.results.map((article: any) => ({
+      const resultsWithExcerpts = response.data.results.map((article: BlogArticle) => ({
         ...article,
         contenido: createExcerpt(article.contenido || ''),
       }));

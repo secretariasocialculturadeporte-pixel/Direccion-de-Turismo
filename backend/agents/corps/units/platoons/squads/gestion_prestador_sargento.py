@@ -1,15 +1,17 @@
 from .sargento_base_graph import SargentoGraphBuilder
-from tools.herramientas_prestador import PrestadorSoldiers
+from backend.tools.herramientas_prestador import PrestadorSoldiers
 from typing import Any
+
 
 def get_gestion_prestador_sargento_builder():
     """
-    Returns a function (a builder) that can construct the sargento agent
-    once provided with the necessary context, like an api_client.
-    This follows a factory or builder pattern.
+    Devuelve una función (builder) que puede construir el agente sargento
+    cuando se le proporcione el contexto necesario, como un api_client.
+    Sigue el patrón factory/builder.
     """
+
     def build_sargento_agent(api_client: Any):
-        """Builds the sargento's compiled graph using the provided api_client."""
+        """Construye el grafo del Sargento usando el api_client proporcionado."""
 
         # El Sargento recluta a su escuadra de soldados especialistas
         squad = PrestadorSoldiers(api_client).get_all_soldiers()

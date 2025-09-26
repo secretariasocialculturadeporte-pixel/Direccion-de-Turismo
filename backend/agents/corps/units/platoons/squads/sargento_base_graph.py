@@ -6,6 +6,7 @@ from langgraph.prebuilt import ToolNode
 from langchain_openai import ChatOpenAI
 from langchain_core.tools import BaseTool
 
+
 class SargentoBaseState(TypedDict):
     """La pizarra táctica estandarizada para todos los Sargentos."""
     teniente_order: str
@@ -13,6 +14,7 @@ class SargentoBaseState(TypedDict):
     messages: Annotated[List[BaseMessage], operator.add]
     final_report: str
     error: str | None
+
 
 class SargentoGraphBuilder:
     """Constructor estandarizado para todos los agentes Sargento."""
@@ -23,7 +25,10 @@ class SargentoGraphBuilder:
         self.model = ChatOpenAI(model="gpt-4o-2024-05-13", temperature=0).bind_tools(squad)
 
     def get_sargento_brain(self, state: SargentoBaseState):
-        """El cerebro del Sargento. Analiza el estado y decide la siguiente acción para su escuadra."""
+        """
+        (CEREBRO REAL) El cerebro del Sargento.
+        Analiza el estado y decide la siguiente acción para su escuadra.
+        """
         print(f"--- 🤔 SARGENTO ({self.squad_name}): Analizando orden y decidiendo acción... ---")
         return self.model.invoke(state["messages"])
 
@@ -37,12 +42,27 @@ class SargentoGraphBuilder:
     def compile_report_node(self, state: SargentoBaseState) -> SargentoBaseState:
         """Compila el informe final para el Teniente a partir del historial de la misión."""
         print(f"--- 📄 SARGENTO ({self.squad_name}): Misión completada. Compilando reporte. ---")
-        executed_steps = [f"Acción: {tool_call['name']}, Resultado: {tool_call['output']}" for msg in state["messages"] if hasattr(msg, 'tool_calls') for tool_call in msg.tool_calls]
-        if not executed_steps:
-            report_body = "Misión completada sin necesidad de acciones directas de la escuadra."
-        else:
+
+        # Si hubo tool_calls, resumimos acciones
+        executed_steps = [
+            f"Acción: {tool_call['name']}, Resultado: {tool_call['output']}"
+            for msg in state["messages"]
+            if hasattr(msg, 'tool_calls')
+            for tool_call in msg.tool_calls
+        ]
+
+        if executed_steps:
             report_body = "\n- ".join(executed_steps)
-        state["final_report"] = f"Misión completada. Resumen de acciones de la escuadra de {self.squad_name}:\n- {report_body}"
+            state["final_report"] = (
+                f"Misión completada. Resumen de acciones de la escuadra de {self.squad_name}:\n- {report_body}"
+            )
+        else:
+            last_ai_message = state["messages"][-1].content
+            report_body = last_ai_message if last_ai_message else "La escuadra ejecutó la misión sin un reporte verbal."
+            state["final_report"] = (
+                f"Misión completada. Reporte de la escuadra de {self.squad_name}: {report_body}"
+            )
+
         return state
 
     def build_graph(self):

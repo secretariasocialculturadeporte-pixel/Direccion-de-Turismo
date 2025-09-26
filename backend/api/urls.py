@@ -18,6 +18,7 @@ from .views import (
     PrestadorServicioPublicListView,
     PrestadorServicioPublicDetailView,
     ContenidoMunicipioViewSet,
+    AgentCommandView,
 )
 
 # Creamos un router para registrar los ViewSets
@@ -46,4 +47,7 @@ urlpatterns = [
     path('atractivos/<slug:slug>/', AtractivoTuristicoDetailView.as_view(), name='atractivos-detail'),
     path('locations/', LocationListView.as_view(), name='locations-list'),
     path('contenido-municipio/', ContenidoMunicipioViewSet.as_view({'get': 'list'}), name='contenido-municipio-public-list'),
+
+    # --- Vistas para el Sistema de Agentes ---
+    path('agente/comando/', AgentCommandView.as_view(), name='agent-command'),
 ]

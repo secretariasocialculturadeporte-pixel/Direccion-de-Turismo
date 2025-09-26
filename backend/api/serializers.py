@@ -326,3 +326,15 @@ class ContenidoMunicipioSerializer(serializers.ModelSerializer):
         # Asigna el usuario actual al actualizar un bloque
         validated_data['actualizado_por'] = self.context['request'].user
         return super().update(instance, validated_data)
+
+
+# --- Serializador para el Agente ---
+
+class AgentCommandSerializer(serializers.Serializer):
+    """
+    Serializador para validar la orden enviada al sistema de agentes.
+    """
+    orden = serializers.CharField(
+        max_length=2000,
+        help_text="La orden o instrucción en lenguaje natural para el agente Coronel."
+    )

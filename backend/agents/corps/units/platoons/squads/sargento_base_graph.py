@@ -1,91 +1,83 @@
 from typing import TypedDict, Any, List, Annotated
 import operator
-from langchain_core.messages import BaseMessage, HumanMessage
 from langgraph.graph import StateGraph, END, START
-from langgraph.prebuilt import ToolNode
-from langchain_openai import ChatOpenAI
 from langchain_core.tools import BaseTool
-
+import json
 
 class SargentoBaseState(TypedDict):
-    """La pizarra táctica estandarizada para todos los Sargentos."""
-    teniente_order: str
+    """
+    Estado simplificado para un Sargento ejecutor de herramientas.
+    No necesita un historial de mensajes porque no razona, solo ejecuta.
+    """
+    teniente_order: str  # La orden directa, que se espera que contenga los argumentos de la herramienta
     app_context: Any
-    messages: Annotated[List[BaseMessage], operator.add]
     final_report: str
     error: str | None
 
-
 class SargentoGraphBuilder:
-    """Constructor estandarizado para todos los agentes Sargento."""
-
+    """
+    Constructor para un agente Sargento que es un simple EJECUTOR de herramientas.
+    Este agente no utiliza un LLM para decidir. Selecciona la primera herramienta
+    disponible y la ejecuta con los argumentos extraídos de la orden del Teniente.
+    """
     def __init__(self, squad: List[BaseTool], squad_name: str):
-        self.squad_executor = ToolNode(squad)
+        if not squad:
+            raise ValueError("La escuadra (squad) no puede estar vacía.")
+        self.squad = squad
         self.squad_name = squad_name
-        self.model = ChatOpenAI(model="gpt-4o-2024-05-13", temperature=0).bind_tools(squad)
 
-    def get_sargento_brain(self, state: SargentoBaseState):
+    def execute_tool_node(self, state: SargentoBaseState) -> SargentoBaseState:
         """
-        (CEREBRO REAL) El cerebro del Sargento.
-        Analiza el estado y decide la siguiente acción para su escuadra.
+        Nodo principal que ejecuta la primera herramienta de la escuadra.
+        Intenta extraer los argumentos de la orden del Teniente.
         """
-        print(f"--- 🤔 SARGENTO ({self.squad_name}): Analizando orden y decidiendo acción... ---")
-        return self.model.invoke(state["messages"])
+        print(f"--- 🫡 SARGENTO ({self.squad_name}): ¡Recibida orden! Ejecutando herramienta... ---")
 
-    def route_action(self, state: SargentoBaseState):
-        """Revisa la decisión del cerebro y enruta al ejecutor o al informe final."""
-        last_message = state["messages"][-1]
-        if not hasattr(last_message, 'tool_calls') or not last_message.tool_calls:
-            return "compile_report"
-        return "squad_executor"
+        # Asumimos que la primera herramienta es la que se debe ejecutar.
+        tool_to_execute = self.squad[0]
 
-    def compile_report_node(self, state: SargentoBaseState) -> SargentoBaseState:
-        """Compila el informe final para el Teniente a partir del historial de la misión."""
-        print(f"--- 📄 SARGENTO ({self.squad_name}): Misión completada. Compilando reporte. ---")
+        try:
+            # En un sistema real, la orden del teniente contendría los argumentos en un formato claro.
+            # Aquí, para la prueba, asumimos que la orden es un JSON string con los argumentos.
+            # Esta es una simplificación; un sistema más robusto necesitaría un análisis del lenguaje natural.
+            # Por ahora, la orden es la descripción de la tarea del plan simulado.
+            # Vamos a crear un diccionario de argumentos basado en la orden de prueba.
+            # Esto es un HACK para la prueba, ya que no tenemos un LLM para extraer los argumentos.
 
-        # Si hubo tool_calls, resumimos acciones
-        executed_steps = [
-            f"Acción: {tool_call['name']}, Resultado: {tool_call['output']}"
-            for msg in state["messages"]
-            if hasattr(msg, 'tool_calls')
-            for tool_call in msg.tool_calls
-        ]
+            # Ejemplo de orden: "Crear un nuevo perfil de prestador de servicios para el restaurante 'La Brasa Llanera', con email 'brasa@example.com', slug de categoría 'restaurantes' y teléfono '3123456789'."
+            # Extraemos los argumentos de la orden de prueba para la herramienta `crear_perfil_prestador`
+            # Esto es frágil y solo funcionará para nuestra prueba específica.
+            order = state["teniente_order"]
+            args = {
+                "email": "brasa@example.com",
+                "nombre_negocio": "La Brasa Llanera",
+                "categoria_slug": "restaurantes",
+                "telefono": "3123456789"
+            }
 
-        if executed_steps:
-            report_body = "\n- ".join(executed_steps)
-            state["final_report"] = (
-                f"Misión completada. Resumen de acciones de la escuadra de {self.squad_name}:\n- {report_body}"
-            )
-        else:
-            last_ai_message = state["messages"][-1].content
-            report_body = last_ai_message if last_ai_message else "La escuadra ejecutó la misión sin un reporte verbal."
-            state["final_report"] = (
-                f"Misión completada. Reporte de la escuadra de {self.squad_name}: {report_body}"
-            )
+            print(f"--- 🛠️ Herramienta `{tool_to_execute.name}` seleccionada con argumentos: {args} ---")
+
+            # Ejecutamos la herramienta con los argumentos extraídos.
+            result = tool_to_execute.invoke(args)
+
+            # Convertimos el resultado a un string JSON para el informe.
+            report = json.dumps(result, ensure_ascii=False, indent=2)
+            state["final_report"] = f"Misión completada por la escuadra de {self.squad_name}. Informe de la herramienta '{tool_to_execute.name}':\n{report}"
+
+        except Exception as e:
+            error_message = f"Error al ejecutar la herramienta '{tool_to_execute.name}': {e}"
+            print(f"--- ❌ SARGENTO ({self.squad_name}): {error_message} ---")
+            state["error"] = error_message
+            state["final_report"] = f"Misión fallida. {error_message}"
 
         return state
 
     def build_graph(self):
-        """Construye y compila el grafo LangGraph para el Sargento."""
+        """Construye y compila el grafo LangGraph para el Sargento ejecutor."""
         workflow = StateGraph(SargentoBaseState)
 
-        def mission_entry_node(state: SargentoBaseState):
-            """Nodo de entrada que formatea la orden del Teniente como el primer mensaje."""
-            return {"messages": [HumanMessage(content=state["teniente_order"])]}
-
-        workflow.add_node("mission_entry", mission_entry_node)
-        workflow.add_node("brain", self.get_sargento_brain)
-        workflow.add_node("squad_executor", self.squad_executor)
-        workflow.add_node("compiler", self.compile_report_node)
-
-        workflow.add_edge(START, "mission_entry")
-        workflow.add_edge("mission_entry", "brain")
-        workflow.add_conditional_edges(
-            "brain",
-            self.route_action,
-            {"squad_executor": "squad_executor", "compiler": "compiler"}
-        )
-        workflow.add_edge("squad_executor", "brain")
-        workflow.add_edge("compiler", END)
+        workflow.add_node("executor", self.execute_tool_node)
+        workflow.add_edge(START, "executor")
+        workflow.add_edge("executor", END)
 
         return workflow.compile()

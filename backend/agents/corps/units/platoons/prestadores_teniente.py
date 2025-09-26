@@ -1,6 +1,6 @@
 from typing import TypedDict, Any
 from langgraph.graph import StateGraph, END
-from backend.agents.corps.units.platoons.squads.gestion_prestador_sargento import get_gestion_prestador_sargento_builder
+from agents.corps.units.platoons.squads.gestion_prestador_sargento import get_gestion_prestador_sargento_builder
 
 class PrestadoresLieutenantState(TypedDict):
     """La pizarra táctica del Teniente de Prestadores."""
@@ -10,7 +10,6 @@ class PrestadoresLieutenantState(TypedDict):
     error: str | None
 
 # --- PUESTO DE MANDO DEL TENIENTE: CONSTRUCTOR DEL SARGENTO ---
-# El Teniente no tiene un sargento, sino la capacidad de construir uno cuando sea necesario.
 prestador_sargento_builder = get_gestion_prestador_sargento_builder()
 
 # --- NODOS DEL GRAFO SUPERVISOR DEL TENIENTE ---
@@ -22,10 +21,8 @@ async def delegate_to_sargento(state: PrestadoresLieutenantState) -> Prestadores
     order = state['captain_order']
     print(f"--- 🫡 TENIENTE DE PRESTADORES: Recibida orden. Construyendo y delegando misión al Sargento -> '{order}' ---")
     try:
-        # 1. Construir al Sargento con el contexto actual de la misión.
-        # En el futuro, el api_client vendrá del contexto. Por ahora, es None.
-        api_client = state.get('app_context')
-        prestador_sargento_agent = prestador_sargento_builder(api_client)
+        # 1. Construir al Sargento. Ya no necesita el api_client.
+        prestador_sargento_agent = prestador_sargento_builder()
 
         # 2. El Teniente invoca el grafo completo del Sargento, pasándole la orden.
         result = await prestador_sargento_agent.ainvoke({

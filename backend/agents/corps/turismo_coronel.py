@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from langgraph.graph import StateGraph, END
 from importlib import import_module
 from langchain_openai import ChatOpenAI
+from functools import partial
 
 # --- DEFINICIÓN DEL ESTADO Y EL PLAN TÁCTICO DEL CORONEL ---
 
@@ -72,7 +73,9 @@ async def generic_captain_node(
     mission = state["task_queue"].pop(0)
     print(f"--- 🔽 CORONEL: Delegando a CAP. {captain_name.upper()} -> '{mission.task_description}' ---")
     try:
-        module = import_module(f"backend.agents.corps.units.{captain_module_name}")
+        # La ruta debe ser relativa al directorio 'backend', que es la raíz del proyecto Django.
+        module_path = f"agents.corps.units.{captain_module_name}"
+        module = import_module(module_path)
         get_captain_graph = getattr(module, captain_graph_func)
         captain_agent = get_captain_graph()
         result = await captain_agent.ainvoke({"coronel_order": mission.task_description})
@@ -122,7 +125,8 @@ def get_turismo_coronel_graph():
     for node_name, (module, func, display) in captain_nodes_map.items():
         workflow.add_node(
             node_name,
-            lambda s, m=module, f=func, d=display: generic_captain_node(s, m, f, d)
+            # Usamos partial para pre-configurar la función asíncrona con sus argumentos
+            partial(generic_captain_node, captain_module_name=module, captain_graph_func=func, captain_name=display)
         )
 
     workflow.add_node("compiler", compile_final_report)

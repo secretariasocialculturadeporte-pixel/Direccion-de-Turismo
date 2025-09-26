@@ -149,6 +149,7 @@ class CategoriaPrestadorListView(generics.ListAPIView):
     queryset = CategoriaPrestador.objects.all().order_by('nombre')
     serializer_class = CategoriaPrestadorSerializer
     permission_classes = [AllowAny]
+    pagination_class = None # Desactiva la paginación para esta vista
 
 
 class PrestadorServicioPublicListView(generics.ListAPIView):

@@ -23,7 +23,9 @@ class SargentoGraphBuilder:
         self.model = ChatOpenAI(model="gpt-4o-2024-05-13", temperature=0).bind_tools(squad)
 
     def get_sargento_brain(self, state: SargentoBaseState):
-        """El cerebro del Sargento. Analiza el estado y decide la siguiente acción para su escuadra."""
+        """
+        (CEREBRO REAL) El cerebro del Sargento. Analiza el estado y decide la siguiente acción para su escuadra.
+        """
         print(f"--- 🤔 SARGENTO ({self.squad_name}): Analizando orden y decidiendo acción... ---")
         return self.model.invoke(state["messages"])
 
@@ -37,12 +39,12 @@ class SargentoGraphBuilder:
     def compile_report_node(self, state: SargentoBaseState) -> SargentoBaseState:
         """Compila el informe final para el Teniente a partir del historial de la misión."""
         print(f"--- 📄 SARGENTO ({self.squad_name}): Misión completada. Compilando reporte. ---")
-        executed_steps = [f"Acción: {tool_call['name']}, Resultado: {tool_call['output']}" for msg in state["messages"] if hasattr(msg, 'tool_calls') for tool_call in msg.tool_calls]
-        if not executed_steps:
-            report_body = "Misión completada sin necesidad de acciones directas de la escuadra."
-        else:
-            report_body = "\n- ".join(executed_steps)
-        state["final_report"] = f"Misión completada. Resumen de acciones de la escuadra de {self.squad_name}:\n- {report_body}"
+
+        # Extraemos el contenido del último mensaje de la IA como reporte.
+        last_ai_message = state["messages"][-1].content
+        report_body = last_ai_message if last_ai_message else "La escuadra ejecutó la misión sin un reporte verbal."
+
+        state["final_report"] = f"Misión completada. Reporte de la escuadra de {self.squad_name}: {report_body}"
         return state
 
     def build_graph(self):
@@ -50,11 +52,10 @@ class SargentoGraphBuilder:
         workflow = StateGraph(SargentoBaseState)
 
         def mission_entry_node(state: SargentoBaseState):
-            """Nodo de entrada que formatea la orden del Teniente como el primer mensaje."""
             return {"messages": [HumanMessage(content=state["teniente_order"])]}
 
         workflow.add_node("mission_entry", mission_entry_node)
-        workflow.add_node("brain", self.get_sargento_brain)
+        workflow.add_node("brain", self.get_sargento_brain) # Usamos el cerebro real
         workflow.add_node("squad_executor", self.squad_executor)
         workflow.add_node("compiler", self.compile_report_node)
 

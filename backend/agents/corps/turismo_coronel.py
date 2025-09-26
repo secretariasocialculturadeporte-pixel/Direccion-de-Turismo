@@ -1,8 +1,8 @@
 from typing import TypedDict, List
 from pydantic import BaseModel, Field
 from langgraph.graph import StateGraph, END
-
-# No se importa nada de agentes aquí para evitar la carga inicial
+from importlib import import_module
+from langchain_openai import ChatOpenAI
 
 class CaptainTask(BaseModel):
     task_description: str
@@ -20,85 +20,89 @@ class TurismoColonelState(TypedDict):
     error: str | None
 
 async def create_tactical_plan(state: TurismoColonelState) -> TurismoColonelState:
-    """
-    (NODO 1: PLANIFICADOR TÁCTICO SIMULADO)
-    Genera un plan predefinido para la prueba.
-    """
-    print("--- 🧠 CORONEL DE TURISMO: Creando Plan Táctico (SIMULADO)... ---")
-    plan_simulado = TacticalPlan(plan=[
-        CaptainTask(
-            task_description=state['general_order'],
-            responsible_captain='Prestadores'
-        )
-    ])
-    state.update({
-        "tactical_plan": plan_simulado,
-        "task_queue": plan_simulado.plan.copy(),
-        "completed_missions": [],
-        "error": None
-    })
+    print(f"--- 🧠 CORONEL: Planificando para la orden: '{state['general_order']}' ---")
+
+    prompt = f"""
+Eres el Coronel de Turismo, un experto en logística y delegación. Tu misión es analizar la orden de tu General y asignarla al Capitán especialista más adecuado.
+
+Capitanes bajo tu mando y sus especialidades:
+- Admin: Para aprobar, rechazar o moderar contenido.
+- Turista: Para acciones de un turista, como guardar favoritos en "Mi Viaje".
+- Funcionario: Para gestionar contenido institucional del municipio.
+- Videos: Para añadir, eliminar o gestionar videos.
+- Artesanos: Para registrar o gestionar perfiles de artesanos.
+- Oferta: Para gestionar promociones, ofertas y paquetes especiales.
+- Prestadores: Para todos los demás prestadores de servicios (hoteles, restaurantes, guías, agencias, transporte).
+- Atractivos: Para crear o gestionar atractivos turísticos.
+- Publicaciones: Para crear noticias, eventos o blogs.
+
+Orden del General: "{state['general_order']}"
+
+Crea un plan de un solo paso para el Capitán apropiado en formato JSON.
+"""
+    try:
+        structured_llm = ChatOpenAI(model="gpt-4o", temperature=0).with_structured_output(TacticalPlan)
+        plan = await structured_llm.ainvoke(prompt)
+        state.update({"tactical_plan": plan, "task_queue": plan.plan.copy(), "completed_missions": []})
+    except Exception as e:
+        state["error"] = f"Error del LLM al planificar para el Coronel: {e}"
     return state
 
 def route_to_captain(state: TurismoColonelState):
     if state.get("error") or not state["task_queue"]:
         return "compile_report"
+    return f"{state['task_queue'][0].responsible_captain.lower()}_captain"
 
-    captain_unit = state["task_queue"][0].responsible_captain
-    print(f"--- 🧭 CORONEL DE TURISMO: Enrutando misión a Capitán '{captain_unit}' ---")
-    if captain_unit == 'Prestadores':
-        return "prestadores_captain"
-    else:
-        state["error"] = f"Planificación defectuosa: Capitán desconocido '{captain_unit}'."
-        state["task_queue"].pop(0)
-        return "route_to_captain"
-
-async def prestadores_captain_node(state: TurismoColonelState) -> TurismoColonelState:
-    """
-    (NODO DE DELEGACIÓN) Carga perezosamente al Capitán y le delega la misión.
-    """
-    # --- Carga Perezosa del Capitán ---
-    from agents.corps.units.prestadores_captain import get_prestadores_captain_graph
-    prestadores_captain_agent = get_prestadores_captain_graph()
-
+async def generic_captain_node(state: TurismoColonelState, captain_module_name: str, captain_graph_func: str, captain_name: str) -> TurismoColonelState:
     mission = state["task_queue"].pop(0)
-    print(f"--- 🔽 CORONEL: Delegando a CAP. PRESTADORES -> '{mission.task_description}' ---")
-    result = await prestadores_captain_agent.ainvoke({"coronel_order": mission.task_description})
-    state["completed_missions"].append({
-        "captain": "Prestadores",
-        "mission": mission.task_description,
-        "report": result.get("final_report", "Sin reporte.")
-    })
+    print(f"--- 🔽 CORONEL: Delegando a CAP. {captain_name.upper()} -> '{mission.task_description}' ---")
+    try:
+        module = import_module(f"agents.corps.units.{captain_module_name}")
+        get_captain_graph = getattr(module, captain_graph_func)
+        captain_agent = get_captain_graph()
+        result = await captain_agent.ainvoke({"coronel_order": mission.task_description, "app_context": state.get("app_context")})
+        state["completed_missions"].append({"captain": captain_name, "report": result.get("final_report", "Sin reporte.")})
+    except Exception as e:
+        state["error"] = f"Error al cargar o ejecutar el cuerpo del Capitán {captain_name}: {e}"
     return state
 
 async def compile_final_report(state: TurismoColonelState) -> TurismoColonelState:
-    print("--- 📄 CORONEL DE TURISMO: Compilando Informe de División para el General... ---")
     if state.get("error"):
-        state["final_report"] = f"Misión de la División fallida. Razón: {state['error']}"
+        state["final_report"] = f"Misión fallida. Razón: {state['error']}"
     else:
-        report_body = "\n".join(
-            [f"- Reporte del Capitán de {m['captain']}:\n  Misión: '{m['mission']}'\n  Resultado: {m['report']}"
-             for m in state["completed_missions"]]
-        )
+        report_body = "\n".join([f"- Reporte del Capitán de {m['captain']}:\n  {m['report']}" for m in state["completed_missions"]])
         state["final_report"] = f"Misión de la División de Turismo completada.\nResumen de Operaciones:\n{report_body}"
     return state
 
 def get_turismo_coronel_graph():
     workflow = StateGraph(TurismoColonelState)
     workflow.add_node("planner", create_tactical_plan)
-    workflow.add_node("router", lambda state: state)
-    workflow.add_node("prestadores_captain", prestadores_captain_node)
+    workflow.add_node("router", lambda s: s)
+
+    captain_nodes_map = {
+        "prestadores_captain": ("prestadores_captain", "get_prestadores_captain_graph", "Prestadores"),
+        "atractivos_captain": ("atractivos_captain", "get_atractivos_captain_graph", "Atractivos"),
+        "publicaciones_captain": ("publicaciones_captain", "get_publicaciones_captain_graph", "Publicaciones"),
+        "admin_captain": ("admin_captain", "get_admin_captain_graph", "Admin"),
+        "turista_captain": ("turista_captain", "get_turista_captain_graph", "Turista"),
+        "funcionario_captain": ("funcionario_captain", "get_funcionario_captain_graph", "Funcionario"),
+        "videos_captain": ("videos_captain", "get_videos_captain_graph", "Videos"),
+        "artesanos_captain": ("artesanos_captain", "get_artesanos_captain_graph", "Artesanos"),
+        "oferta_captain": ("oferta_captain", "get_oferta_captain_graph", "Oferta"),
+    }
+    for node_name, (module, func, display) in captain_nodes_map.items():
+        workflow.add_node(node_name, lambda s, m=module, f=func, d=display: generic_captain_node(s, m, f, d))
+
     workflow.add_node("compiler", compile_final_report)
     workflow.set_entry_point("planner")
     workflow.add_edge("planner", "router")
-    workflow.add_conditional_edges(
-        "router",
-        route_to_captain,
-        {
-            "prestadores_captain": "prestadores_captain",
-            "compile_report": "compiler",
-            "route_to_captain": "router"
-        }
-    )
-    workflow.add_edge("prestadores_captain", "router")
+
+    conditional_map = {name: name for name in captain_nodes_map.keys()}
+    conditional_map["compile_report"] = "compiler"
+    workflow.add_conditional_edges("router", route_to_captain, conditional_map)
+
+    for node_name in captain_nodes_map.keys():
+        workflow.add_edge(node_name, "router")
+
     workflow.add_edge("compiler", END)
     return workflow.compile()

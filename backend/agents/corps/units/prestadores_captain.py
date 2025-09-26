@@ -3,7 +3,8 @@ from langgraph.graph import StateGraph, END
 from pydantic import BaseModel, Field
 from importlib import import_module
 from langchain_openai import ChatOpenAI
-from backend.agents.corps.units.platoons.prestadores_teniente import get_prestadores_teniente_graph
+from agents.corps.units.platoons.prestadores_teniente import get_prestadores_teniente_graph
+from functools import partial
 
 
 # --- DEFINICIÓN DE TAREAS Y PLAN ---
@@ -59,9 +60,22 @@ Genera el plan en formato JSON.
     try:
         structured_llm = ChatOpenAI(model="gpt-4o", temperature=0).with_structured_output(LieutenantPlan)
         plan = await structured_llm.ainvoke(prompt)
-        state.update({"lieutenant_plan": plan, "task_queue": plan.plan.copy(), "completed_missions": []})
     except Exception as e:
-        state["error"] = f"Error del LLM al planificar para el Capitán de Prestadores: {e}"
+        print(f"[WARN] LLM no disponible para Capitán de Prestadores. Usando plan simulado. Error: {e}")
+        # Plan de contingencia: si el LLM falla, asignamos la tarea directamente al Teniente general.
+        plan = LieutenantPlan(plan=[
+            LieutenantTask(
+                task_description=state["coronel_order"],
+                responsible_lieutenant="Prestadores"
+            )
+        ])
+
+    state.update({
+        "lieutenant_plan": plan,
+        "task_queue": plan.plan.copy(),
+        "completed_missions": [],
+        "error": None
+    })
     return state
 
 
@@ -88,7 +102,9 @@ async def generic_lieutenant_node(state: PrestadoresCaptainState, teniente_modul
     mission = state["task_queue"].pop(0)
     print(f"--- 🚀 CAPITÁN: Delegando a TTE. {teniente_name.upper()} -> '{mission.task_description}' ---")
     try:
-        module = import_module(f"agents.corps.units.platoons.{teniente_module_name}")
+        # Corregimos la ruta para que sea relativa al proyecto Django
+        module_path = f"api.management.commands.agents.corps.units.platoons.{teniente_module_name}"
+        module = import_module(module_path)
         get_teniente_graph = getattr(module, teniente_graph_func_name)
         lieutenant_agent = get_teniente_graph()
 
@@ -141,7 +157,10 @@ def get_prestadores_captain_graph():
         "transporte_lieutenant": ("transporte_teniente", "get_transporte_teniente_graph", "Transporte"),
     }
     for node_name, (module, func, display) in lieutenant_nodes.items():
-        workflow.add_node(node_name, lambda s, m=module, f=func, d=display: generic_lieutenant_node(s, m, f, d))
+        workflow.add_node(
+            node_name,
+            partial(generic_lieutenant_node, teniente_module_name=module, teniente_graph_func_name=func, teniente_name=display)
+        )
 
     # Teniente general (Prestadores)
     workflow.add_node("prestadores_lieutenant", prestadores_node)

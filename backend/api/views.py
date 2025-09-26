@@ -372,8 +372,7 @@ class AdminApprovePrestadorView(views.APIView):
 
         prestador.aprobado = True
         prestador.save(update_fields=['aprobado'])
-         return Response({'status': 'Prestador aprobado con éxito.'}, status=status.HTTP_200_OK)
-       
+        return Response({'status': 'Prestador aprobado con éxito.'}, status=status.HTTP_200_OK)
 
 class ContenidoMunicipioViewSet(viewsets.ModelViewSet):
     """
@@ -401,3 +400,52 @@ class ContenidoMunicipioViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context.update({'request': self.request})
         return context
+
+
+# --- Vista para el Sistema de Agentes ---
+
+from .serializers import AgentCommandSerializer
+
+class AgentCommandView(views.APIView):
+    """
+    Endpoint para recibir y procesar comandos para el sistema de agentes jerárquicos.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        """
+        Recibe una orden en lenguaje natural, la valida y la pasa al Coronel de Turismo.
+        """
+        # --- Carga Perezosa (Lazy Loading) de los Agentes ---
+        # Los componentes pesados del agente se importan aquí, solo cuando el endpoint es llamado,
+        # para no ralentizar el arranque del servidor.
+        from agents.corps.turismo_coronel import get_turismo_coronel_graph
+        import asyncio
+
+        serializer = AgentCommandSerializer(data=request.data)
+        if serializer.is_valid():
+            orden = serializer.validated_data['orden']
+
+            # La lógica del agente se ejecuta aquí.
+            coronel_agent = get_turismo_coronel_graph()
+
+            # Creamos una configuración única para esta conversación para evitar estados compartidos.
+            config = {"configurable": {"thread_id": f"user_command_{request.user.id}"}}
+
+            try:
+                # Invocamos el grafo del Coronel de forma asíncrona desde nuestro contexto síncrono.
+                result = asyncio.run(coronel_agent.ainvoke({
+                    "general_order": orden,
+                    "app_context": None
+                }, config=config))
+
+                final_report = result.get("final_report", "El agente completó la misión pero no generó un informe final.")
+                return Response({"respuesta": final_report}, status=status.HTTP_200_OK)
+
+            except Exception as e:
+                return Response(
+                    {"error": f"Error crítico al procesar la orden con el agente: {str(e)}"},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
